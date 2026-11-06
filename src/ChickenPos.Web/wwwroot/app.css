@@ -7,3 +7,28 @@
 .login-illustration{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:540px;font-size:initial}
 .login-illustration img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain;border-radius:14px}
 @media(max-width:850px){.login-illustration{display:none}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.pos-menu .search{margin-bottom:4px}
+.pos-menu .filter-note{margin:0 0 12px}
+.cart-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cart-title h2{margin:8px 0 0}
+.cart-item-controls{display:flex;align-items:center;gap:8px}
+.cart-remove{padding:6px 8px;color:#a83a35;background:#fff5f3;font-size:12px}
+.cart-row--added,.cart-row--updated{animation:cart-row-in .2s ease-out both}
+.cart-row--removing{animation:cart-row-out .15s ease-in both;pointer-events:none}
+.cart-feedback{animation:cart-feedback .18s ease-out both}
+.menu--filtered .product{animation:menu-filter-in .16s ease-out both}
+.menu-admin-panel{padding:18px 22px 22px}
+.menu-admin-filters{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(150px,.8fr) minmax(165px,.9fr) auto;align-items:center;gap:10px;margin-bottom:16px}
+.menu-admin-filters input,.menu-admin-filters select{width:100%;min-width:0}
+.menu-admin-filters .filter-note{justify-self:end;white-space:nowrap}
+.menu-admin-row{animation:menu-filter-in .15s ease-out both}
+#toast.is-animated{opacity:0;transform:translate(-50%,8px);transition:opacity .18s ease,transform .18s ease}
+#toast.is-animated.is-visible{opacity:1;transform:translate(-50%,0)}
+@keyframes cart-row-in{from{opacity:.45;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cart-row-out{to{opacity:0;transform:translateX(8px)}}
+@keyframes cart-feedback{from{opacity:.78}to{opacity:1}}
+@keyframes menu-filter-in{from{opacity:.58;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1050px){.menu-admin-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.menu-admin-filters .filter-note{justify-self:start}}
+@media(max-width:520px){.cart-item-controls{gap:5px}.qty{gap:6px}.cart-remove{font-size:11px;padding:6px}.menu-admin-filters{grid-template-columns:1fr}.menu-admin-panel{padding:16px}}
+@media(prefers-reduced-motion:reduce){.cart-row--added,.cart-row--updated,.cart-row--removing,.cart-feedback,.menu--filtered .product,.menu-admin-row{animation:none!important}#toast.is-animated{transition:none}}
