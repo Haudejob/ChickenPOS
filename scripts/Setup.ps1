@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $tools=Join-Path $root '.tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null

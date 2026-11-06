@@ -1,4 +1,4 @@
-param([switch]$NoBuild)
+﻿param([switch]$NoBuild)
 . (Join-Path $PSScriptRoot 'Common.ps1')
 try{$existing=Invoke-RestMethod -Uri 'http://127.0.0.1:5080/api/health' -TimeoutSec 2;if($existing.product -eq 'ChickenPOS'){Write-Host 'ChickenPOS đang chạy: http://127.0.0.1:5080';exit 0}}catch{}
 if(-not $NoBuild){Build-Project}

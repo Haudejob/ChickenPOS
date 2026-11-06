@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Common.ps1')
+﻿. (Join-Path $PSScriptRoot 'Common.ps1')
 Build-Project 'test-release'
 Start-LocalDb
 $python=(Get-Command python -ErrorAction SilentlyContinue).Source

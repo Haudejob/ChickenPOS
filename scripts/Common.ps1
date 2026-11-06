@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $webRoot=Join-Path $projectRoot 'src/ChickenPos.Web'
 $localDotnet=Join-Path $projectRoot '.tools/dotnet/dotnet.exe'

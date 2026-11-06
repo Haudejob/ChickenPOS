@@ -1,0 +1,5 @@
+root = true
+
+# Windows PowerShell 5.1 needs a BOM to read Vietnamese script text as UTF-8.
+[*.ps1]
+charset = utf-8-bom

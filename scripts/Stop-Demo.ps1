@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $record=Join-Path $root 'artifacts/demo.pid'
 if(-not(Test-Path -LiteralPath $record)){Write-Host 'Không có PID do script quản lý.';exit 0}
