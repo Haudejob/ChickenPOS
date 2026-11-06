@@ -159,7 +159,7 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
         var recipe=await Query(c,t,"SELECT IngredientId,QuantityPerUnit FROM Recipe WHERE ProductId=@p ORDER BY IngredientId",("p",line["ProductId"]));Require(recipe.Count>0,"Món chưa có công thức, không thể chế biến.",409);
         foreach(var r in recipe){decimal need=(decimal)r["QuantityPerUnit"]!*(int)line["Quantity"]!;var ingredients=await Query(c,t,"SELECT Name,Stock,Unit FROM Ingredient WITH(UPDLOCK,HOLDLOCK) WHERE Id=@i",("i",r["IngredientId"]));var i=ingredients[0];Require((decimal)i["Stock"]!>=need,$"Thiếu {i["Name"]}: cần {need} {i["Unit"]}, tồn {i["Stock"]}.",409);}
         foreach(var r in recipe){decimal need=(decimal)r["QuantityPerUnit"]!*(int)line["Quantity"]!;
-            await Exec(c,t,"UPDATE Ingredient SET Stock=Stock-@q WHERE Id=@i",("q",need),("i",r["IngredientId"]));
+            var updated=await Exec(c,t,"UPDATE Ingredient SET Stock=Stock-@q WHERE Id=@i AND Stock>=@q",("q",need),("i",r["IngredientId"]));Require(updated==1,"Tồn nguyên liệu vừa thay đổi. Hãy tải lại và thử lại.",409);
             await Exec(c,t,"INSERT InventoryTransaction(IngredientId,OrderDetailId,QuantityDelta,Type,RecipeAmountSnapshot,ActorId,RequestKey) VALUES(@i,@d,-@q,'Consume',@r,@a,@key)",("i",r["IngredientId"]),("d",detail),("q",need),("r",r["QuantityPerUnit"]),("a",actor),("key",$"start-{detail}"));}
         await Exec(c,t,"UPDATE OrderDetail SET KitchenStatus='Cooking',StartedAt=SYSUTCDATETIME() WHERE Id=@d",("d",detail));await History(c,t,order,detail,actor,"Waiting","Cooking","CookingStarted",$"start-{detail}");return "Cooking";
     });
@@ -186,11 +186,14 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
     });
     static async Task ApplyCancellation(SqlConnection c,SqlTransaction t,int order,int request,int actor)
     {
-        await Exec(c,t,"UPDATE InventoryTransaction SET WasteQuantity=-QuantityDelta,CancellationRequestId=@r WHERE Type='Consume' AND OrderDetailId IN (SELECT Id FROM OrderDetail WHERE OrderId=@o);UPDATE OrderDetail SET KitchenStatus='Cancelled' WHERE OrderId=@o;UPDATE Orders SET Status='Cancelled' WHERE Id=@o;UPDATE DiningSession SET ClosedAt=SYSUTCDATETIME() WHERE Id=(SELECT SessionId FROM Orders WHERE Id=@o) AND ClosedAt IS NULL",("r",request),("o",order));
-        await History(c,t,order,null,actor,"Open","Cancelled","CancellationApproved",$"cancel-{request}");
+        await Exec(c,t,"UPDATE InventoryTransaction SET WasteQuantity=-QuantityDelta,CancellationRequestId=@r WHERE Type='Consume' AND OrderDetailId IN (SELECT Id FROM OrderDetail WHERE OrderId=@o AND KitchenStatus NOT IN ('Served','Cancelled'));UPDATE OrderDetail SET KitchenStatus='Cancelled' WHERE OrderId=@o AND KitchenStatus NOT IN ('Served','Cancelled')",("r",request),("o",order));
+        bool hasServed=await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE OrderId=@o AND KitchenStatus='Served'",("o",order))>0;
+        if(!hasServed)await Exec(c,t,"UPDATE Orders SET Status='Cancelled' WHERE Id=@o;UPDATE DiningSession SET ClosedAt=SYSUTCDATETIME() WHERE Id=(SELECT SessionId FROM Orders WHERE Id=@o) AND ClosedAt IS NULL",("o",order));
+        await History(c,t,order,null,actor,"Open",hasServed?"Open":"Cancelled","CancellationApproved",$"cancel-{request}");
     }
     public Task<object> Cancel(int id,string reason,int actor,bool manager)=>Transaction(async(c,t)=>{
         reason=Clean(reason,500,"Lý do hủy");var o=await LockOrder(c,t,id);Require((string)o["Status"]! =="Open","Đơn không còn mở.",409);await NotPaid(c,t,id);await NoPending(c,t,id);
+        Require(await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE OrderId=@id AND KitchenStatus NOT IN ('Served','Cancelled')",("id",id))>0,"Đơn không còn món chưa giao để hủy.",409);
         bool started=await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE OrderId=@id AND StartedAt IS NOT NULL",("id",id))>0;bool approved=!started||manager;
         int request=await Value<int>(c,t,"INSERT CancellationRequest(OrderId,RequesterId,ReviewerId,Reason,Status,ReviewedAt) OUTPUT INSERTED.Id VALUES(@o,@a,@reviewer,@reason,@status,@time)",("o",id),("a",actor),("reviewer",approved?actor:null),("reason",reason),("status",approved?"Approved":"Pending"),("time",approved?DateTime.UtcNow:null));
         if(approved)await ApplyCancellation(c,t,id,request,actor);else await History(c,t,id,null,actor,"Open","Pending","CancellationRequested",$"request-{request}");return (object)new{id=request,status=approved?"Approved":"Pending"};

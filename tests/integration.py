@@ -101,7 +101,11 @@ test('TC14','FR19/FR26/BR12','Hai thu ngân đồng thời chỉ một Payment v
 def cancel_after_cooking():
  o=create([(1,1)],4);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks();r=sales.post(f'/orders/{o}/cancel',{'reason':'Khách đổi ý, ca kiểm thử'});assert r['status']=='Pending';cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':50000,'transferConfirmed':False,'requestKey':key()},409);manager.post(f'/cancellations/{r["id"]}/review',{'approve':True});assert stocks()==before;assert detail(o)['header']['status']=='Cancelled';consume=[t for t in inventory()['transactions'] if t['detailId']==d and t['type']=='Consume'];assert len(consume)==1 and consume[0]['waste']==.25
 test('TC15','FR18/BR20','Hủy sau chế biến cần duyệt, ghi hao hụt và không xuất/hoàn lần hai',cancel_after_cooking)
-test('TC16','FR18/TK06','Đơn đã thanh toán không được hủy',lambda:manager.post(f'/orders/{state["counter"]}/cancel',{'reason':'Đã thu tiền'},409))
+def paid_order_cannot_cancel():
+ o=create([(4,1)]);payment=cashier.post(f'/orders/{o}/pay',{'method':'Transfer','cashReceived':0,'transferConfirmed':True,'requestKey':key()});before=stocks();before_cancellations=detail(o)['cancellations']
+ sales.post(f'/orders/{o}/cancel',{'reason':'Đơn đã thanh toán'},409)
+ d=detail(o);assert d['header']['status']=='Open' and d['header']['paymentId']==payment['id'];assert d['cancellations']==before_cancellations and stocks()==before
+test('TC16','FR18/TK06','Đơn đã thanh toán không được hủy',paid_order_cannot_cancel)
 def adjustment_idempotent():
  before=stocks()[1];k=key();p={'ingredientId':1,'quantity':.1,'reason':'Nhập kiểm thử','requestKey':k};manager.post('/inventory/adjust',p);manager.post('/inventory/adjust',p);assert abs(stocks()[1]-before-.1)<.0001
  manager.post('/inventory/adjust',{'ingredientId':1,'quantity':-100000,'reason':'Âm tồn','requestKey':key()},409)
@@ -153,6 +157,43 @@ def expanded_dishes():
   assert actual=={ids[n]:Decimal(q) for n,q in recipe.items()},(name,actual)
   kitchen.post(f'/details/{line}/start',{});assert stocks()==after
 test('TC23','Menu mở rộng','Bốn món mới: đúng ảnh, giá, công thức và chỉ trừ nguyên liệu một lần',expanded_dishes)
+def consume_for(detail_id):return [t for t in inventory()['transactions'] if t['detailId']==detail_id and t['type']=='Consume']
+def serve_detail(detail_id):
+ kitchen.post(f'/details/{detail_id}/start',{});kitchen.post(f'/details/{detail_id}/ready',{});sales.post(f'/details/{detail_id}/serve',{})
+def pay_table(order):return cashier.post(f'/orders/{order}/pay',{'method':'Transfer','cashReceived':0,'transferConfirmed':True,'requestKey':key()})
+
+def cancel_served_only():
+ o=create([(4,1)],7);send(o);d=item(o);serve_detail(d);before=stocks();consume=consume_for(d);assert len(consume)==1 and consume[0]['waste']==0
+ sales.post(f'/orders/{o}/cancel',{'reason':'Không được hủy món đã giao'},409)
+ manager.post(f'/orders/{o}/cancel',{'reason':'Manager cũng không được hủy món đã giao'},409)
+ result=detail(o);assert result['items'][0]['status']=='Served' and result['header']['status']=='Open';assert result['cancellations']==[] and stocks()==before;assert consume_for(d)[0]['waste']==0
+ pay_table(o);assert detail(o)['header']['status']=='Completed'
+test('TC24','FR18','Đơn chỉ có món Served bị từ chối hủy',cancel_served_only)
+
+def cancel_served_and_cooking():
+ o=create([(1,1),(2,1)],7);send(o);lines=detail(o)['items'];served_id,cooking_id=[line['id'] for line in lines];serve_detail(served_id);kitchen.post(f'/details/{cooking_id}/start',{});before=stocks()
+ assert consume_for(served_id)[0]['waste']==0 and consume_for(cooking_id)[0]['waste']==0
+ request=sales.post(f'/orders/{o}/cancel',{'reason':'Hủy món chưa giao'});assert request['status']=='Pending';assert stocks()==before
+ assert manager.post(f'/cancellations/{request["id"]}/review',{'approve':True})['status']=='Approved'
+ result=detail(o);statuses={line['id']:line['status'] for line in result['items']};assert statuses[served_id]=='Served' and statuses[cooking_id]=='Cancelled';assert result['header']['status']=='Open';assert stocks()==before
+ assert consume_for(served_id)[0]['waste']==0 and consume_for(cooking_id)[0]['waste']==.25
+ assert any(h['eventType']=='Served' for h in result['history']);assert pay_table(o)['amount']==39000;assert detail(o)['header']['status']=='Completed'
+test('TC25','FR18/FR19','Chỉ hủy món Cooking, giữ món Served và hao hụt riêng',cancel_served_and_cooking)
+
+def cancel_served_and_ready():
+ o=create([(1,1),(2,1)],7);send(o);lines=detail(o)['items'];served_id,ready_id=[line['id'] for line in lines];serve_detail(served_id);kitchen.post(f'/details/{ready_id}/start',{});kitchen.post(f'/details/{ready_id}/ready',{});before=stocks()
+ request=sales.post(f'/orders/{o}/cancel',{'reason':'Hủy món sẵn sàng chưa giao'});assert request['status']=='Pending';assert stocks()==before
+ manager.post(f'/cancellations/{request["id"]}/review',{'approve':True})
+ result=detail(o);statuses={line['id']:line['status'] for line in result['items']};assert statuses[served_id]=='Served' and statuses[ready_id]=='Cancelled';assert result['header']['status']=='Open';assert stocks()==before
+ assert consume_for(served_id)[0]['waste']==0 and consume_for(ready_id)[0]['waste']==.25
+ assert pay_table(o)['amount']==39000;assert detail(o)['header']['status']=='Completed'
+test('TC26','FR18/FR19','Hủy món Ready chưa giao, giữ nguyên món Served',cancel_served_and_ready)
+
+def manager_self_approves_cancel():
+ o=create([(1,1)],7);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks()
+ result=manager.post(f'/orders/{o}/cancel',{'reason':'Quản lý tự duyệt'});assert result['status']=='Approved';assert stocks()==before
+ order=detail(o);assert order['items'][0]['status']=='Cancelled' and order['header']['status']=='Cancelled';assert order['cancellations'][0]['status']=='Approved';assert consume_for(d)[0]['waste']==.25
+test('TC27','FR18','Manager tự duyệt hủy và ghi Waste đúng một lần',manager_self_approves_cancel)
 
 root=pathlib.Path(__file__).resolve().parents[1];folder=root/'docs/evidence';folder.mkdir(parents=True,exist_ok=True)
 report={'executedAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'baseUrl':base,'testDatabase':'Isolated ChickenPOS_Test_* database; see test-server startup record','cases':results,'passed':sum(r['status']=='PASS' for r in results),'failed':sum(r['status']=='FAIL' for r in results),'boundary':'Functional HTTP + SQL persistence/transaction checks. Not a load test, penetration test or production certification.'}
