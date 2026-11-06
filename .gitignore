@@ -1,0 +1,12 @@
+.tools/
+**/bin/
+**/obj/
+**/.vs/
+**/App_Data/
+artifacts/
+*.user
+*.log
+.env
+appsettings.Local.json
+*.mdf
+*.ldf
