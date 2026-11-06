@@ -43,13 +43,14 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
         var schema=await File.ReadAllTextAsync(Path.Combine(env.ContentRootPath,"Data/schema.sql"));
         using(var c=new SqlConnection(connection)){await c.OpenAsync();await Exec(c,null,schema);}
         await Transaction(async(c,t)=>{
+            await Exec(c,t,"UPDATE Product SET Name=@new WHERE Id=5 AND Name=@old AND Category=N'Combo'",("new","Combo 2 miếng gà + khoai tây chiên nhỏ"),("old","Combo 2 miếng gà"));
             if(await Value<int>(c,t,"SELECT COUNT(*) FROM Roles")>0)return 0;
             foreach(var r in new[]{"Manager","Sales","Cashier","Kitchen"})await Exec(c,t,"INSERT Roles(Name) VALUES(@r)",("r",r));
             string password=config["DemoPassword"]??"Chicken@2026!";
             var hasher=new PasswordHasher<string>();
             foreach(var (u,n,r) in new[]{("quanly","Quản lý","Manager"),("banhang","Nhân viên bán hàng","Sales"),("thungan","Thu ngân","Cashier"),("bep","Nhân viên bếp","Kitchen")})
                 await Exec(c,t,"INSERT Users(RoleId,Username,DisplayName,PasswordHash) SELECT Id,@u,@n,@h FROM Roles WHERE Name=@r",("u",u),("n",n),("h",hasher.HashPassword(u,password)),("r",r));
-            foreach(var (name,price,category,icon) in new[]{("Gà giòn cay",39000,"Gà rán","🍗"),("Gà sốt mật ong",45000,"Gà rán","🍗"),("Khoai tây chiên",29000,"Ăn kèm","🍟"),("Coca-Cola",19000,"Đồ uống","🥤"),("Combo 2 miếng gà",79000,"Combo","🍱"),("Trà đào",25000,"Đồ uống","🧋")})
+            foreach(var (name,price,category,icon) in new[]{("Gà giòn cay",39000,"Gà rán","🍗"),("Gà sốt mật ong",45000,"Gà rán","🍗"),("Khoai tây chiên",29000,"Ăn kèm","🍟"),("Coca-Cola",19000,"Đồ uống","🥤"),("Combo 2 miếng gà + khoai tây chiên nhỏ",79000,"Combo","🍱"),("Trà đào",25000,"Đồ uống","🧋")})
                 await Exec(c,t,"INSERT Product(Name,Price,Category,Icon) VALUES(@n,@p,@c,@i)",("n",name),("p",price),("c",category),("i",icon));
             for(int i=1;i<=8;i++)await Exec(c,t,"INSERT DiningTable(Name) VALUES(@n)",("n",$"Bàn {i:00}"));
             foreach(var (name,unit,stock,min) in new[]{("Thịt gà","kg",10m,2m),("Khoai tây","kg",5m,1m),("Nước ngọt","chai",20m,5m),("Trà đào nguyên liệu","phần",15m,3m)})
