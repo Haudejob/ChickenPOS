@@ -1,7 +1,7 @@
-﻿{
-    "port":  5081,
-    "environment":  "Testing",
-    "database":  "ChickenPOS_Test_20261107_004734",
-    "server":  "SQL Server LocalDB",
-    "startedAt":  "2026-11-06T17:47:35.6894804Z"
+{
+  "database": "ChickenPOS_Test_20261107_014637",
+  "startedAt": "2026-11-06T18:46:39.7387412Z",
+  "environment": "Testing",
+  "server": "SQL Server LocalDB",
+  "port": 5081
 }

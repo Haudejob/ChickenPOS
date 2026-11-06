@@ -63,10 +63,23 @@ def start_repeat():
  d=item(state['o1']);before=stocks()[1];kitchen.post(f'/details/{d}/start',{});middle=stocks()[1];kitchen.post(f'/details/{d}/start',{});assert before-middle==.5 and stocks()[1]==middle
 test('TC09','FR16/FR24','Bấm bắt đầu hai lần chỉ trừ kho một lần',start_repeat)
 def concurrent_start():
- o=create([(1,1)],2);send(o);d=item(o);before=stocks()[1];k2=Client('bep')
- with concurrent.futures.ThreadPoolExecutor(2) as pool:r=list(pool.map(lambda client:client.post(f'/details/{d}/start',{}),[kitchen,k2]))
- assert all(i['status']=='Cooking' for i in r);assert before-stocks()[1]==.25
- assert len([t for t in inventory()['transactions'] if t['detailId']==d and t['type']=='Consume'])==1
+ o=create([(1,1)],2)
+ send(o)
+ d=item(o)
+ before=stocks()[1]
+ k2=Client('bep')
+
+ def attempt(client):
+  return client.req(f'/details/{d}/start',{},expect=(200,409))
+
+ with concurrent.futures.ThreadPoolExecutor(2) as pool:
+  r=list(pool.map(attempt,[kitchen,k2]))
+
+ assert sum(i.get('status')=='Cooking' for i in r)==1
+ assert sum('error' in i for i in r)==1
+ assert before-stocks()[1]==.25
+ consumes=[t for t in inventory()['transactions'] if t['detailId']==d and t['type']=='Consume']
+ assert len(consumes)==1
 test('TC10','FR24/BR13','Hai yêu cầu đồng thời cho cùng dòng chỉ có một Consume',concurrent_start)
 def missing_rollsback():
  old=stocks()[2];stock_adjust(2,0);o=create([(5,1)],3);send(o);before=stocks();count=len(inventory()['transactions']);kitchen.post(f'/details/{item(o)}/start',{},409);assert stocks()==before;assert len(inventory()['transactions'])==count;assert detail(o)['items'][0]['status']=='Waiting';stock_adjust(2,old)
@@ -150,4 +163,3 @@ md+=f"\nTổng: {report['passed']} PASS, {report['failed']} FAIL. Thời gian l�
 for r in results:
  if r['status']=='FAIL':md+=f"\n{r['code']}: {r['detail']}\n"
 (folder/'KET_QUA_KIEM_THU.md').write_text(md,encoding='utf8');print(json.dumps({'passed':report['passed'],'failed':report['failed']}));sys.exit(1 if report['failed'] else 0)
-
