@@ -59,7 +59,37 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
                 await Exec(c,t,"INSERT Recipe VALUES(@p,@i,@q)",("p",p),("i",i),("q",q));
             await Exec(c,t,"INSERT InventoryTransaction(IngredientId,QuantityDelta,Type,ActorId,RequestKey) SELECT Id,Stock,'Opening',1,CONCAT('opening-',Id) FROM Ingredient");return 0;
         });
+        await ExpandMenu();
     }
+    async Task ExpandMenu() => await Transaction(async(c,t)=>{
+        const string migration="menu-four-dishes-20261107";
+        if(await Value<int>(c,t,"SELECT COUNT(*) FROM CatalogMigration WHERE Id=@id",("id",migration))>0)return 0;
+        var actor=await Value<int>(c,t,"SELECT TOP(1) Id FROM Users WHERE Username=N'quanly' ORDER BY Id");
+        Require(actor>0,"Không tìm thấy quản lý để ghi nhận tồn đầu nguyên liệu.");
+        var ingredients=new Dictionary<string,int>();
+        foreach(var (name,unit,stock,min) in new[]{("Thịt gà","kg",10m,2m),("Khoai tây","kg",5m,1m),("Bột chiên","kg",3m,.5m),("Dầu chiên","lít",5m,1m),("Sốt phô mai","kg",1.5m,.3m),("Sốt tỏi cay","kg",1.5m,.3m),("Bột phô mai","kg",.5m,.1m),("Trà khô","kg",.3m,.05m),("Chanh tươi","kg",2m,.4m),("Đường","kg",2m,.4m),("Đá viên","kg",10m,2m)}){
+            var id=await Value<int>(c,t,"SELECT TOP(1) Id FROM Ingredient WHERE Name=@n AND Unit=@u ORDER BY Id",("n",name),("u",unit));
+            if(id==0){
+                id=await Value<int>(c,t,"INSERT Ingredient(Name,Unit,Stock,MinStock) OUTPUT INSERTED.Id VALUES(@n,@u,@s,@m)",("n",name),("u",unit),("s",stock),("m",min));
+                await Exec(c,t,"INSERT InventoryTransaction(IngredientId,QuantityDelta,Type,ActorId,RequestKey,Reason) VALUES(@i,@s,'Opening',@a,@k,@r)",("i",id),("s",stock),("a",actor),("k",migration),("r","Tồn đầu cho thực đơn mở rộng"));
+            }
+            ingredients[name]=id;
+        }
+        var dishes=new[]{
+            (Name:"Gà sốt phô mai",Price:49000,Category:"Gà rán",Image:"ga-sot-pho-mai.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt phô mai",.05m)}),
+            (Name:"Gà sốt tỏi cay",Price:49000,Category:"Gà rán",Image:"ga-sot-toi-cay.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt tỏi cay",.05m)}),
+            (Name:"Khoai tây lắc phô mai",Price:35000,Category:"Ăn kèm",Image:"khoai-tay-lac-pho-mai.png",Recipe:new[]{("Khoai tây",.2m),("Dầu chiên",.015m),("Bột phô mai",.015m)}),
+            (Name:"Trà chanh",Price:22000,Category:"Đồ uống",Image:"tra-chanh.png",Recipe:new[]{("Trà khô",.005m),("Chanh tươi",.04m),("Đường",.025m),("Đá viên",.15m)})
+        };
+        foreach(var d in dishes){
+            var id=await Value<int>(c,t,"SELECT TOP(1) Id FROM Product WHERE Name=@n ORDER BY Id",("n",d.Name));
+            if(id==0)id=await Value<int>(c,t,"INSERT Product(Name,Price,Category,Icon,ImagePath) OUTPUT INSERTED.Id VALUES(@n,@p,@c,N'🍗',@im)",("n",d.Name),("p",d.Price),("c",d.Category),("im","/images/menu/"+d.Image));
+            else await Exec(c,t,"UPDATE Product SET ImagePath=@im WHERE Id=@id",("im","/images/menu/"+d.Image),("id",id));
+            foreach(var (name,amount) in d.Recipe)
+                await Exec(c,t,"IF NOT EXISTS(SELECT 1 FROM Recipe WHERE ProductId=@p AND IngredientId=@i) INSERT Recipe(ProductId,IngredientId,QuantityPerUnit) VALUES(@p,@i,@q)",("p",id),("i",ingredients[name]),("q",amount));
+        }
+        await Exec(c,t,"INSERT CatalogMigration(Id) VALUES(@id)",("id",migration));return 0;
+    });
     public async Task<Dictionary<string,object?>?> Login(string username,string password)
     {
         if(string.IsNullOrWhiteSpace(username)||string.IsNullOrEmpty(password)||password.Length>200)return null;
@@ -67,7 +97,7 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
         if(rows.Count==0)return null;var user=rows[0];var result=new PasswordHasher<string>().VerifyHashedPassword(username,(string)user["hash"]!,password);return result==PasswordVerificationResult.Failed?null:user;
     }
     public async Task<bool> Active(int id)=> (await Read("SELECT Id FROM Users WHERE Id=@id AND IsActive=1",("id",id))).Count==1;
-    public Task<List<Dictionary<string,object?>>> Products()=>Read("SELECT Id id,Name name,Price price,Category category,Icon icon,IsActive isActive FROM Product ORDER BY Id");
+    public Task<List<Dictionary<string,object?>>> Products()=>Read("SELECT Id id,Name name,Price price,Category category,Icon icon,ImagePath imagePath,IsActive isActive FROM Product ORDER BY Id");
     public Task<List<Dictionary<string,object?>>> Tables()=>Read("SELECT t.Id id,t.Name name,s.Id sessionId,o.Id orderId,o.Code orderCode FROM DiningTable t LEFT JOIN DiningSession s ON s.TableId=t.Id AND s.ClosedAt IS NULL LEFT JOIN Orders o ON o.SessionId=s.Id ORDER BY t.Id");
     public Task<List<Dictionary<string,object?>>> Orders()=>Read("SELECT o.Id id,o.Code code,o.OrderType orderType,o.Status status,o.CreatedAt createdAt,t.Name tableName,COALESCE(SUM(CASE WHEN d.KitchenStatus<>'Cancelled' THEN d.Quantity*d.UnitPriceSnapshot ELSE 0 END),0) total,CASE WHEN p.Id IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END paid FROM Orders o LEFT JOIN OrderDetail d ON d.OrderId=o.Id LEFT JOIN DiningSession s ON s.Id=o.SessionId LEFT JOIN DiningTable t ON t.Id=s.TableId LEFT JOIN Payment p ON p.OrderId=o.Id GROUP BY o.Id,o.Code,o.OrderType,o.Status,o.CreatedAt,t.Name,p.Id ORDER BY o.Id DESC");
     public async Task<object> Order(int id)

@@ -121,6 +121,26 @@ def one_open_session():
  o=create([(4,1)],6);sales.post('/orders',{'orderType':'Table','tableId':6,'items':[{'productId':4,'quantity':1}],'requestKey':key()},409);assert next(t for t in sales.get('/tables') if t['id']==6)['orderId']==o
 test('TC22','FR12/BR18','Một bàn không có hai phiên mở',one_open_session)
 
+def expanded_dishes():
+ from decimal import Decimal
+ expected={
+  'Gà sốt phô mai':(49000,'ga-sot-pho-mai.png',{'Thịt gà':'.25','Bột chiên':'.04','Dầu chiên':'.02','Sốt phô mai':'.05'}),
+  'Gà sốt tỏi cay':(49000,'ga-sot-toi-cay.png',{'Thịt gà':'.25','Bột chiên':'.04','Dầu chiên':'.02','Sốt tỏi cay':'.05'}),
+  'Khoai tây lắc phô mai':(35000,'khoai-tay-lac-pho-mai.png',{'Khoai tây':'.2','Dầu chiên':'.015','Bột phô mai':'.015'}),
+  'Trà chanh':(22000,'tra-chanh.png',{'Trà khô':'.005','Chanh tươi':'.04','Đường':'.025','Đá viên':'.15'})}
+ catalog=manager.get('/products');stock_adjust(1,10)
+ for name,(price,image,recipe) in expected.items():
+  matches=[p for p in catalog if p['name']==name];assert len(matches)==1
+  p=matches[0];assert p['price']==price and p['imagePath']=='/images/menu/'+image
+  with urllib.request.urlopen(base+p['imagePath']) as r:assert r.status==200 and r.read(8)==b'\x89PNG\r\n\x1a\n'
+  before=stocks();o=create([(p['id'],1)]);assert stocks()==before
+  cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':price,'transferConfirmed':False,'requestKey':key()});send(o)
+  line=item(o);kitchen.post(f'/details/{line}/start',{});after=stocks();ids={i['name']:i['id'] for i in inventory()['ingredients']}
+  actual={i:Decimal(str(before[i]))-Decimal(str(after[i])) for i in before if before[i]!=after[i]}
+  assert actual=={ids[n]:Decimal(q) for n,q in recipe.items()},(name,actual)
+  kitchen.post(f'/details/{line}/start',{});assert stocks()==after
+test('TC23','Menu mở rộng','Bốn món mới: đúng ảnh, giá, công thức và chỉ trừ nguyên liệu một lần',expanded_dishes)
+
 root=pathlib.Path(__file__).resolve().parents[1];folder=root/'docs/evidence';folder.mkdir(parents=True,exist_ok=True)
 report={'executedAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'baseUrl':base,'testDatabase':'Isolated ChickenPOS_Test_* database; see test-server startup record','cases':results,'passed':sum(r['status']=='PASS' for r in results),'failed':sum(r['status']=='FAIL' for r in results),'boundary':'Functional HTTP + SQL persistence/transaction checks. Not a load test, penetration test or production certification.'}
 (folder/'integration-results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf8')

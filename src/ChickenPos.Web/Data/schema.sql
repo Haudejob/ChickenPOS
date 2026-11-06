@@ -18,3 +18,8 @@ CREATE UNIQUE INDEX UX_ConsumeOnce ON InventoryTransaction(OrderDetailId,Ingredi
 CREATE UNIQUE INDEX UX_InventoryRequest ON InventoryTransaction(RequestKey,IngredientId,Type);
 CREATE TABLE OrderStatusHistory(Id int IDENTITY PRIMARY KEY, OrderId int NOT NULL REFERENCES Orders(Id), OrderDetailId int NULL REFERENCES OrderDetail(Id), OldState nvarchar(30) NULL, NewState nvarchar(30) NOT NULL, ActorId int NOT NULL REFERENCES Users(Id), OccurredAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(), EventType nvarchar(40) NOT NULL, RequestKey nvarchar(80) NOT NULL);
 END;
+
+IF COL_LENGTH(N'dbo.Product', N'ImagePath') IS NULL
+    ALTER TABLE Product ADD ImagePath nvarchar(240) NULL;
+IF OBJECT_ID(N'dbo.CatalogMigration', N'U') IS NULL
+    CREATE TABLE CatalogMigration(Id nvarchar(100) NOT NULL PRIMARY KEY, AppliedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME());
