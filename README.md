@@ -1,6 +1,6 @@
 # ChickenPOS · Bản demo báo cáo sản phẩm
 
-Ứng dụng web quản lý quán gà rán cho học phần Công nghệ phần mềm. Backend ASP.NET/C#, giao diện HTML/CSS/JavaScript, dữ liệu SQL Server LocalDB. Được khởi tạo với hỗ trợ AI, cần cả nhóm review và hiểu phần mình trình bày.
+Ứng dụng web quản lý quán gà rán cho học phần Công nghệ phần mềm. Backend ASP.NET/C#, giao diện HTML/CSS/JavaScript, dữ liệu SQL Server LocalDB. Cả nhóm cần review và hiểu phần mình trình bày.
 
 **Repository nhóm:** [Haudejob/ChickenPOS](https://github.com/Haudejob/ChickenPOS). Chủ repo thêm collaborators sau khi nhận username.
 

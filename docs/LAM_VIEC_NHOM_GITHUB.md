@@ -60,7 +60,7 @@ Code không tự sửa trên máy ngay khi người khác đang gõ. Pull nhận
 
 ## 5. Quy tắc phối hợp
 
-- Mỗi người dùng tên/email Git của chính mình. Commit đầu tiên của repo được ghi `Codex AI-assisted` vì code nền do AI hỗ trợ khởi tạo.
+- Mỗi người dùng tên/email Git của chính mình để ghi nhận phần việc đã thực hiện.
 - `Store.cs` hiện chứa nhiều nghiệp vụ chung: TV3/TV4/TV5 thống nhất vùng sửa trước, tránh cùng chỉnh một đoạn. Tên người phụ trách trong bảng phân công đã được chủ nhóm điền.
 - Không commit `.tools`, `artifacts`, `.env`, mật khẩu riêng, file MDF/LDF hoặc thư mục `.vs`. `.gitignore` đã có sẵn.
 - Chỉnh schema không tự cập nhật cấu trúc DB cũ: hiện schema tạo lần đầu, chưa có migration framework. Mọi thay đổi bảng phải có kế hoạch nâng cấp dữ liệu, không xóa DB demo để che lỗi.

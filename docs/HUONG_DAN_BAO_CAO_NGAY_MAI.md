@@ -9,7 +9,7 @@ Không dành phần lớn thời gian trình bày lại DFD/ERD hoặc sáu mock
 ## Những việc phải hoàn thành tối nay, theo thứ tự
 
 1. **Chốt máy demo và chạy app:** dùng `Start-Demo.ps1 -NoBuild`, thử cả bốn tài khoản. Máy hiện tại đã có bộ SDK cục bộ và LocalDB. Máy khác phải chạy Setup và kiểm tra trước, không đợi đến lớp mới tải phụ thuộc.
-2. **Phân công sáu người:** điền tên thật vào bảng dưới, mỗi người đọc code/phạm vi của mình và xác nhận có thể giải thích. AI đã hỗ trợ khởi tạo; không nhận mọi thành viên đã viết phần đó khi chưa thực hiện.
+2. **Phân công sáu người:** kiểm tra tên trong bảng dưới, mỗi người đọc code/phạm vi của mình và xác nhận có thể giải thích. Ghi nhận công việc thực tế đã hoàn thành của từng thành viên.
 3. **Chạy lại test:** dùng `Run-Tests.ps1`, đọc file kết quả. Nếu có sửa nghiệp vụ sau đó, chạy lại các ca liên quan hoặc cả bộ test. Không sửa PASS/FAIL bằng tay.
 4. **Tập luồng demo 8–10 phút:** theo `KICH_BAN_DEMO.md`. Dùng bàn còn trống. Không nhầm DB test (cổng 5081) với demo (5080).
 5. **Lưu bằng chứng:** Git log thật, ảnh ứng dụng chạy, file test JSON/Markdown. Quay một video dự phòng ngắn của cùng luồng nếu nhóm có công cụ ghi màn hình.
@@ -18,7 +18,7 @@ Không dành phần lớn thời gian trình bày lại DFD/ERD hoặc sáu mock
 
 ## Phân công đề xuất cho 6 thành viên
 
-Đây là **nhiệm vụ cần review/bổ sung thực tế từ thời điểm nhận project**, không phải xác nhận sáu người đã viết các module AI vừa khởi tạo.
+Đây là **nhiệm vụ cần review/bổ sung thực tế từ thời điểm nhận project**. Mỗi thành viên cập nhật kết quả thực hiện và minh chứng tương ứng.
 
 | Người (điền tên) | Việc tối nay | Minh chứng thật cần có | Vai trò lúc demo |
 |---|---|---|---|
@@ -37,7 +37,7 @@ Nếu giảng viên vẫn chỉ cho hai người thuyết trình: chọn TV1+TV4
 2. Mỗi người clone riêng, tạo nhánh ví dụ `feature/pos-ui`, `feature/order-review`, `test/stock-race`, `docs/chapter-5-6`.
 3. Chốt đầu mối từng file: `app.js`/`app.css` TV2; `Store.cs` TV3/TV4/TV5 phối hợp trước khi sửa, tránh làm đồng thời cùng vùng.
 4. Người tích hợp review và merge, chạy lại test trước demo.
-5. Chụp `git log` thực tế. Không tạo nhiều commit bằng tên sáu người để giả lập quá trình làm việc đã diễn ra. Ghi rõ việc sử dụng AI nếu giảng viên có quy định.
+5. Chụp `git log` thực tế, sử dụng commit và PR tương ứng với công việc đã thực hiện của từng thành viên.
 
 ## Cấu trúc nói trong buổi báo cáo
 

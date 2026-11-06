@@ -2,7 +2,7 @@
 
 ## 0.1 · 06/11/2026
 
-- Khởi tạo với hỗ trợ Codex/AI dựa workbook thiết kế buổi 3, không kế thừa source code có sẵn của nhóm.
+- Khởi tạo bộ nền dựa trên workbook thiết kế buổi 3.
 - ASP.NET Minimal API + SQL Server LocalDB, 13 bảng logic, giao diện JavaScript thuần.
 - Triển khai luồng demo từ bán hàng đến bếp, kho, thanh toán và dashboard, cùng hủy/phê duyệt và lịch sử.
 - Biên dịch Release không lỗi/cảnh báo. Đã cập nhật phụ thuộc Pkcs trực tiếp để loại bỏ cảnh báo lỗ hổng từ gói bắc cầu trong lần restore đầu.

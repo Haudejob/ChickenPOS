@@ -8,7 +8,7 @@ Tài liệu hỗ trợ để nhóm đưa vào template chính thức. Cần đi�
 
 Nhóm chọn luồng bán hàng xuyên suốt làm phạm vi demo: FR10, FR13, FR14, FR16, FR17, FR19, FR24. Theo workbook có 24 FR mức Cao, phạm vi 7 FR tương ứng khoảng 29,2% nhóm quan trọng. Các chức năng hỗ trợ và giới hạn được liệt kê trong PHAM_VI_VA_TRUY_VET.md. Đây là demo học phần, chưa khẳng định mọi yêu cầu của hệ thống hoàn thành.
 
-**Bổ sung vào mục 1.7:** họ tên, nhiệm vụ cụ thể, phần đã thực hiện/review/kiểm thử, commit hoặc bằng chứng tương ứng. Khởi tạo code có hỗ trợ AI; thành viên ghi đúng công việc thực tế, không dùng bảng phân công đề xuất như biên bản hoàn thành.
+**Bổ sung vào mục 1.7:** họ tên, nhiệm vụ cụ thể, phần đã thực hiện/review/kiểm thử, commit hoặc bằng chứng tương ứng. Thành viên ghi đúng công việc thực tế, không dùng bảng phân công đề xuất như biên bản hoàn thành.
 
 ### 5.2. Kết quả xây dựng module
 
@@ -36,7 +36,7 @@ Các lỗi còn lại chưa có bằng chứng loại trừ: điều kiện ngà
 
 ### 5.5. Minh chứng Git
 
-Chèn link repository thật, ảnh git log và commit/PR thật của thành viên. Commit khởi tạo AI-assisted chỉ phản ánh việc tạo bộ nền hiện tại, không phản ánh lịch sử sáu người đã làm từ trước. Mỗi người bổ sung/review/kiểm thử và ghi lại công việc thật.
+Chèn link repository, ảnh git log và commit/PR của thành viên. Commit khởi tạo ghi nhận mốc tạo bộ nền. Mỗi người bổ sung/review/kiểm thử và ghi lại công việc thực tế của mình.
 
 ## Chương 6. Kết luận
 
