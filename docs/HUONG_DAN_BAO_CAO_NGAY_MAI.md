@@ -22,12 +22,12 @@ Không dành phần lớn thời gian trình bày lại DFD/ERD hoặc sáu mock
 
 | Người (điền tên) | Việc tối nay | Minh chứng thật cần có | Vai trò lúc demo |
 |---|---|---|---|
-| TV1 | Tích hợp, chạy máy demo, Git/README, rà soát kiến trúc | Commit tích hợp hoặc review thực tế, app khởi động được | Dẫn bài và tổng kết |
-| TV2 | Review giao diện POS, tìm món, giỏ, quản lý thực đơn | Sửa/cải thiện UI, ảnh before/after nếu có | Tạo đơn và gọi thêm |
-| TV3 | Review đơn/bàn/phiên, snapshot, gửi dòng mới | Kiểm tra và bổ sung ca biên/commit thật | Giải thích đơn và phiên |
-| TV4 | Review bếp, công thức, transaction, chống trừ trùng | Test thiếu kho/cạnh tranh, giải thích SQL | Thao tác bếp và kho |
-| TV5 | Review thanh toán, hóa đơn, dashboard | Kiểm tra tiền thừa, thu trùng, tính doanh thu | Thu tiền và xem báo cáo |
-| TV6 | QA, truy vết FR, biên bản test, khung chương 5–6 | Chạy test, kiểm tra phạm vi, biên bản review thật | Trình bày test và hạn chế |
+|  Vũ Văn Hậu| Tích hợp, chạy máy demo, Git/README, rà soát kiến trúc | Commit tích hợp hoặc review thực tế, app khởi động được | Dẫn bài và tổng kết |
+|   Lương Xuân Bắc| Review giao diện POS, tìm món, giỏ, quản lý thực đơn | Sửa/cải thiện UI, ảnh before/after nếu có | Tạo đơn và gọi thêm |
+  |  Trần Minh Tiến| Review đơn/bàn/phiên, snapshot, gửi dòng mới | Kiểm tra và bổ sung ca biên/commit thật | Giải thích đơn và phiên |
+|  Nguyễn Thị Lụa| Review bếp, công thức, transaction, chống trừ trùng | Test thiếu kho/cạnh tranh, giải thích SQL | Thao tác bếp và kho |
+|  Vũ Duy Ninh| Review thanh toán, hóa đơn, dashboard | Kiểm tra tiền thừa, thu trùng, tính doanh thu | Thu tiền và xem báo cáo |
+|  Phạm Thị Phương Thảo| QA, truy vết FR, biên bản test, khung chương 5–6 | Chạy test, kiểm tra phạm vi, biên bản review thật | Trình bày test và hạn chế |
 
 Nếu giảng viên vẫn chỉ cho hai người thuyết trình: chọn TV1+TV4 hoặc hai người hiểu luồng tốt nhất. Bốn người còn lại vẫn phải có nhiệm vụ và hiểu phần mình phụ trách.
 

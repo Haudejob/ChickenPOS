@@ -2,7 +2,9 @@
 
 Ứng dụng web quản lý quán gà rán cho học phần Công nghệ phần mềm. Backend ASP.NET/C#, giao diện HTML/CSS/JavaScript, dữ liệu SQL Server LocalDB. Được khởi tạo với hỗ trợ AI, cần cả nhóm review và hiểu phần mình trình bày.
 
-**Đọc trước:** [Việc cần làm cho báo cáo 07/11/2026](docs/HUONG_DAN_BAO_CAO_NGAY_MAI.md), [kịch bản demo](docs/KICH_BAN_DEMO.md), [phạm vi và truy vết](docs/PHAM_VI_VA_TRUY_VET.md), [kết quả test thực tế](docs/evidence/KET_QUA_KIEM_THU.md).
+**Repository nhóm:** [Haudejob/ChickenPOS](https://github.com/Haudejob/ChickenPOS). Chủ repo thêm collaborators sau khi nhận username.
+
+**Đọc trước:** [Làm việc nhóm qua GitHub](docs/LAM_VIEC_NHOM_GITHUB.md), [Việc cần làm cho báo cáo 07/11/2026](docs/HUONG_DAN_BAO_CAO_NGAY_MAI.md), [kịch bản demo](docs/KICH_BAN_DEMO.md), [phạm vi và truy vết](docs/PHAM_VI_VA_TRUY_VET.md), [kết quả test thực tế](docs/evidence/KET_QUA_KIEM_THU.md).
 
 ## Chạy ngay trên máy đang làm việc
 
@@ -64,7 +66,7 @@ docs/                               Hướng dẫn và bằng chứng báo cáo
 
 Để kịp demo, dịch vụ và truy cập SQL còn cùng trong `Store.cs`, trong khi thiết kế buổi 3 tách lớp. Đây là đơn giản hóa triển khai cần nêu rõ; bước sau nên tách service/repository. Các controller logic hiện dùng ASP.NET Minimal API, không có lớp MVC Controller riêng.
 
-Chưa có remote GitHub khi khởi tạo. Một người tạo repository nhóm rồi cấu hình remote/push; người khác clone, tạo nhánh và PR. Xem phân công trong hướng dẫn. Không sửa trực tiếp cùng một file qua thư mục đồng bộ khi chưa thống nhất. Không tạo commit giả cho người chưa làm. Mỗi thành viên cần review, sửa hoặc bổ sung thật và commit phần đó.
+Repo nhóm dùng remote `https://github.com/Haudejob/ChickenPOS.git`, nhánh chính `main`. Thành viên được cấp quyền clone, tạo nhánh và PR; xem [hướng dẫn GitHub](docs/LAM_VIEC_NHOM_GITHUB.md) và phân công trước khi sửa. Không sửa trực tiếp cùng một file qua thư mục đồng bộ khi chưa thống nhất. Không tạo commit giả cho người chưa làm. Mỗi thành viên cần review, sửa hoặc bổ sung thật và commit phần đó.
 
 ## Nguồn thiết kế
 
