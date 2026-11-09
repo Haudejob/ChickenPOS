@@ -201,6 +201,42 @@ def manager_self_approves_cancel():
  order=detail(o);assert order['items'][0]['status']=='Cancelled' and order['header']['status']=='Cancelled';assert order['cancellations'][0]['status']=='Approved';assert consume_for(d)[0]['waste']==.25
 test('TC27','FR18','Manager tự duyệt hủy và ghi Waste đúng một lần',manager_self_approves_cancel)
 
+def product_photo_upload():
+ import base64
+ # JPEG markers and a large comment segment exercise the upload limit without an external fixture.
+ jpeg=lambda marker: b'\xff\xd8\xff\xfe\xff\xff'+marker*65533+b'\xff\xd9'
+ body={'name':'Món thử ảnh','price':35000,'category':'Kiểm thử','icon':'x','isActive':False}
+ def encoded(photo):return base64.b64encode(photo).decode('ascii')
+ sales.post('/products',{**body,'photo':encoded(jpeg(b'a'))},403)
+ product_id=manager.post('/products',{**body,'photo':encoded(jpeg(b'a'))})['id']
+ route=f'/products/{product_id}'
+ def assert_photo(expected):
+  p=next(p for p in sales.get('/products') if p['id']==product_id)
+  assert p['imagePath'].startswith(f'/api{route}/photo?v=')
+  with sales.opener.open(base+p['imagePath']) as response:
+   assert response.headers.get_content_type()=='image/jpeg' and response.read()==expected
+ assert_photo(jpeg(b'a'))
+ manager.req(route,{**body,'price':36000},method='PUT')
+ assert_photo(jpeg(b'a'))
+ manager.req(route,{**body,'photo':encoded(jpeg(b'b'))},method='PUT')
+ assert_photo(jpeg(b'b'))
+ manager.req(route,{**body,'photo':encoded(b'<svg/>')},method='PUT',expect=400)
+ assert_photo(jpeg(b'b'))
+test('TC28','FR02/FR03','Quản lý thêm, thay ảnh món và giữ ảnh khi chỉ sửa thông tin',product_photo_upload)
+
+def delete_product():
+ body={'name':'Món thử xóa','price':35000,'category':'Kiểm thử','icon':'x','isActive':True}
+ product_id=manager.post('/products',body)['id']
+ route=f'/products/{product_id}'
+ sales.req(route,method='DELETE',expect=403)
+ manager.req(route,method='DELETE',expect=400,token=False)
+ manager.req(route,method='DELETE',expect=204)
+ assert all(p['id']!=product_id for p in sales.get('/products'))
+ manager.req(route,method='DELETE',expect=404)
+ manager.req('/products/1',method='DELETE',expect=409)
+ assert any(p['id']==1 for p in sales.get('/products'))
+test('TC29','Thực đơn','Xóa món chưa dùng, giữ món có lịch sử đơn và kiểm tra quyền',delete_product)
+
 root=pathlib.Path(__file__).resolve().parents[1];folder=root/'docs/evidence';folder.mkdir(parents=True,exist_ok=True)
 report={'executedAtUtc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'baseUrl':base,'testDatabase':'Isolated ChickenPOS_Test_* database; see test-server startup record','cases':results,'passed':sum(r['status']=='PASS' for r in results),'failed':sum(r['status']=='FAIL' for r in results),'boundary':'Functional HTTP + SQL persistence/transaction checks. Not a load test, penetration test or production certification.'}
 (folder/'integration-results.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf8')

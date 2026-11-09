@@ -32,3 +32,4 @@
 @media(max-width:1050px){.menu-admin-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.menu-admin-filters .filter-note{justify-self:start}}
 @media(max-width:520px){.cart-item-controls{gap:5px}.qty{gap:6px}.cart-remove{font-size:11px;padding:6px}.menu-admin-filters{grid-template-columns:1fr}.menu-admin-panel{padding:16px}}
 @media(prefers-reduced-motion:reduce){.cart-row--added,.cart-row--updated,.cart-row--removing,.cart-feedback,.menu--filtered .product,.menu-admin-row{animation:none!important}#toast.is-animated{transition:none}}
+.product-edit-preview{display:block;width:160px;max-width:100%;height:106px;object-fit:contain;background:#fff4e5;border-radius:8px;margin-top:10px}.product-edit-preview[hidden]{display:none}
