@@ -60,14 +60,51 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
             await Exec(c,t,"INSERT InventoryTransaction(IngredientId,QuantityDelta,Type,ActorId,RequestKey) SELECT Id,Stock,'Opening',1,CONCAT('opening-',Id) FROM Ingredient");return 0;
         });
         await ExpandMenu();
+        await AddPastaMenu();
     }
-    async Task ExpandMenu() => await Transaction(async(c,t)=>{
-        const string migration="menu-four-dishes-20261107";
+    Task ExpandMenu(){
+        var dishes=new[]{
+            (Name:"Gà sốt phô mai",Price:49000,Category:"Gà rán",Image:"ga-sot-pho-mai.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt phô mai",.05m)}),
+            (Name:"Gà sốt tỏi cay",Price:49000,Category:"Gà rán",Image:"ga-sot-toi-cay.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt tỏi cay",.05m)}),
+            (Name:"Khoai tây lắc phô mai",Price:35000,Category:"Ăn kèm",Image:"khoai-tay-lac-pho-mai.png",Recipe:new[]{("Khoai tây",.2m),("Dầu chiên",.015m),("Bột phô mai",.015m)}),
+            (Name:"Trà chanh",Price:22000,Category:"Đồ uống",Image:"tra-chanh.png",Recipe:new[]{("Trà khô",.005m),("Chanh tươi",.04m),("Đường",.025m),("Đá viên",.15m)})
+        };
+        return ApplyMenuUpdate("menu-four-dishes-20261107",new[]{("Thịt gà","kg",10m,2m),("Khoai tây","kg",5m,1m),("Bột chiên","kg",3m,.5m),("Dầu chiên","lít",5m,1m),("Sốt phô mai","kg",1.5m,.3m),("Sốt tỏi cay","kg",1.5m,.3m),("Bột phô mai","kg",.5m,.1m),("Trà khô","kg",.3m,.05m),("Chanh tươi","kg",2m,.4m),("Đường","kg",2m,.4m),("Đá viên","kg",10m,2m)},dishes);
+    }
+
+    Task AddPastaMenu(){
+        var bolognese=new[]{("Mì spaghetti khô",.1m),("Thịt bò bằm",.1m),("Sốt cà chua",.12m)};
+        var alfredo=new[]{("Mì spaghetti khô",.1m),("Thịt gà",.12m),("Kem nấu ăn",.08m),("Phô mai Parmesan",.02m)};
+        var spicy=new[]{("Mì spaghetti khô",.1m),("Thịt gà",.15m),("Bột chiên",.025m),("Dầu chiên",.015m),("Sốt tỏi cay",.06m)};
+        var lemonTea=new[]{("Trà khô",.005m),("Chanh tươi",.04m),("Đường",.025m),("Đá viên",.15m)};
+        // Half a fries serving, rounded to the three decimal places supported by inventory.
+        var smallFriesAndCola=new[]{("Khoai tây",.1m),("Dầu chiên",.008m),("Bột phô mai",.008m),("Nước ngọt",1m)};
+        var spicyCombo=spicy.Concat(smallFriesAndCola).GroupBy(item=>item.Item1)
+            .Select(group=>(group.Key,group.Sum(item=>item.Item2))).ToArray();
+        var dishes=new[]{
+            (Name:"Mì Ý sốt bò bằm",Price:69000,Category:"Mì Ý",Image:"mi-y-bo-bam.png",Recipe:bolognese),
+            (Name:"Mì Ý sốt kem gà phô mai",Price:69000,Category:"Mì Ý",Image:"mi-y-kem-ga-pho-mai.png",Recipe:alfredo),
+            (Name:"Mì Ý gà giòn sốt cay",Price:65000,Category:"Mì Ý",Image:"mi-y-ga-gion-sot-cay.png",Recipe:spicy),
+            (Name:"Combo Mì Ý bò bằm + Trà chanh",Price:79000,Category:"Combo",Image:"combo-mi-y-bo-bam-tra-chanh.png",Recipe:bolognese.Concat(lemonTea).ToArray()),
+            (Name:"Combo Mì Ý gà giòn + Khoai lắc + Coca-Cola",Price:99000,Category:"Combo",Image:"combo-mi-y-ga-gion-khoai-lac-coca.png",Recipe:spicyCombo)
+        };
+        return ApplyMenuUpdate("menu-pasta-combos-20261109",new[]{
+            ("Mì spaghetti khô","kg",5m,1m),("Thịt bò bằm","kg",3m,.5m),("Sốt cà chua","kg",4m,.75m),
+            ("Kem nấu ăn","kg",3m,.5m),("Phô mai Parmesan","kg",1m,.2m),
+            ("Thịt gà","kg",10m,2m),("Bột chiên","kg",3m,.5m),("Dầu chiên","lít",5m,1m),
+            ("Sốt tỏi cay","kg",1.5m,.3m),("Trà khô","kg",.3m,.05m),("Chanh tươi","kg",2m,.4m),
+            ("Đường","kg",2m,.4m),("Đá viên","kg",10m,2m),("Khoai tây","kg",5m,1m),
+            ("Bột phô mai","kg",.5m,.1m),("Nước ngọt","chai",20m,5m)
+        },dishes);
+    }
+
+    Task ApplyMenuUpdate(string migration, (string Name,string Unit,decimal Stock,decimal Min)[] stockItems,
+        (string Name,int Price,string Category,string Image,(string Ingredient,decimal Amount)[] Recipe)[] dishes) => Transaction(async(c,t)=>{
         if(await Value<int>(c,t,"SELECT COUNT(*) FROM CatalogMigration WHERE Id=@id",("id",migration))>0)return 0;
         var actor=await Value<int>(c,t,"SELECT TOP(1) Id FROM Users WHERE Username=N'quanly' ORDER BY Id");
         Require(actor>0,"Không tìm thấy quản lý để ghi nhận tồn đầu nguyên liệu.");
         var ingredients=new Dictionary<string,int>();
-        foreach(var (name,unit,stock,min) in new[]{("Thịt gà","kg",10m,2m),("Khoai tây","kg",5m,1m),("Bột chiên","kg",3m,.5m),("Dầu chiên","lít",5m,1m),("Sốt phô mai","kg",1.5m,.3m),("Sốt tỏi cay","kg",1.5m,.3m),("Bột phô mai","kg",.5m,.1m),("Trà khô","kg",.3m,.05m),("Chanh tươi","kg",2m,.4m),("Đường","kg",2m,.4m),("Đá viên","kg",10m,2m)}){
+        foreach(var (name,unit,stock,min) in stockItems){
             var id=await Value<int>(c,t,"SELECT TOP(1) Id FROM Ingredient WHERE Name=@n AND Unit=@u ORDER BY Id",("n",name),("u",unit));
             if(id==0){
                 id=await Value<int>(c,t,"INSERT Ingredient(Name,Unit,Stock,MinStock) OUTPUT INSERTED.Id VALUES(@n,@u,@s,@m)",("n",name),("u",unit),("s",stock),("m",min));
@@ -75,12 +112,6 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
             }
             ingredients[name]=id;
         }
-        var dishes=new[]{
-            (Name:"Gà sốt phô mai",Price:49000,Category:"Gà rán",Image:"ga-sot-pho-mai.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt phô mai",.05m)}),
-            (Name:"Gà sốt tỏi cay",Price:49000,Category:"Gà rán",Image:"ga-sot-toi-cay.png",Recipe:new[]{("Thịt gà",.25m),("Bột chiên",.04m),("Dầu chiên",.02m),("Sốt tỏi cay",.05m)}),
-            (Name:"Khoai tây lắc phô mai",Price:35000,Category:"Ăn kèm",Image:"khoai-tay-lac-pho-mai.png",Recipe:new[]{("Khoai tây",.2m),("Dầu chiên",.015m),("Bột phô mai",.015m)}),
-            (Name:"Trà chanh",Price:22000,Category:"Đồ uống",Image:"tra-chanh.png",Recipe:new[]{("Trà khô",.005m),("Chanh tươi",.04m),("Đường",.025m),("Đá viên",.15m)})
-        };
         foreach(var d in dishes){
             var id=await Value<int>(c,t,"SELECT TOP(1) Id FROM Product WHERE Name=@n ORDER BY Id",("n",d.Name));
             if(id==0)id=await Value<int>(c,t,"INSERT Product(Name,Price,Category,Icon,ImagePath) OUTPUT INSERTED.Id VALUES(@n,@p,@c,N'🍗',@im)",("n",d.Name),("p",d.Price),("c",d.Category),("im","/images/menu/"+d.Image));

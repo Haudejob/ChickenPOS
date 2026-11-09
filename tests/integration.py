@@ -144,7 +144,12 @@ def expanded_dishes():
   'Gà sốt phô mai':(49000,'ga-sot-pho-mai.png',{'Thịt gà':'.25','Bột chiên':'.04','Dầu chiên':'.02','Sốt phô mai':'.05'}),
   'Gà sốt tỏi cay':(49000,'ga-sot-toi-cay.png',{'Thịt gà':'.25','Bột chiên':'.04','Dầu chiên':'.02','Sốt tỏi cay':'.05'}),
   'Khoai tây lắc phô mai':(35000,'khoai-tay-lac-pho-mai.png',{'Khoai tây':'.2','Dầu chiên':'.015','Bột phô mai':'.015'}),
-  'Trà chanh':(22000,'tra-chanh.png',{'Trà khô':'.005','Chanh tươi':'.04','Đường':'.025','Đá viên':'.15'})}
+  'Trà chanh':(22000,'tra-chanh.png',{'Trà khô':'.005','Chanh tươi':'.04','Đường':'.025','Đá viên':'.15'}),
+  'Mì Ý sốt bò bằm':(69000,'mi-y-bo-bam.png',{'Mì spaghetti khô':'.1','Thịt bò bằm':'.1','Sốt cà chua':'.12'}),
+  'Mì Ý sốt kem gà phô mai':(69000,'mi-y-kem-ga-pho-mai.png',{'Mì spaghetti khô':'.1','Thịt gà':'.12','Kem nấu ăn':'.08','Phô mai Parmesan':'.02'}),
+  'Mì Ý gà giòn sốt cay':(65000,'mi-y-ga-gion-sot-cay.png',{'Mì spaghetti khô':'.1','Thịt gà':'.15','Bột chiên':'.025','Dầu chiên':'.015','Sốt tỏi cay':'.06'}),
+  'Combo Mì Ý bò bằm + Trà chanh':(79000,'combo-mi-y-bo-bam-tra-chanh.png',{'Mì spaghetti khô':'.1','Thịt bò bằm':'.1','Sốt cà chua':'.12','Trà khô':'.005','Chanh tươi':'.04','Đường':'.025','Đá viên':'.15'}),
+  'Combo Mì Ý gà giòn + Khoai lắc + Coca-Cola':(99000,'combo-mi-y-ga-gion-khoai-lac-coca.png',{'Mì spaghetti khô':'.1','Thịt gà':'.15','Bột chiên':'.025','Dầu chiên':'.023','Sốt tỏi cay':'.06','Khoai tây':'.1','Bột phô mai':'.008','Nước ngọt':'1'})}
  catalog=manager.get('/products');stock_adjust(1,10)
  for name,(price,image,recipe) in expected.items():
   matches=[p for p in catalog if p['name']==name];assert len(matches)==1
@@ -156,7 +161,7 @@ def expanded_dishes():
   actual={i:Decimal(str(before[i]))-Decimal(str(after[i])) for i in before if before[i]!=after[i]}
   assert actual=={ids[n]:Decimal(q) for n,q in recipe.items()},(name,actual)
   kitchen.post(f'/details/{line}/start',{});assert stocks()==after
-test('TC23','Menu mở rộng','Bốn món mới: đúng ảnh, giá, công thức và chỉ trừ nguyên liệu một lần',expanded_dishes)
+test('TC23','Menu mở rộng','Các món và combo mới đúng ảnh, giá, công thức và chỉ trừ kho một lần',expanded_dishes)
 def consume_for(detail_id):return [t for t in inventory()['transactions'] if t['detailId']==detail_id and t['type']=='Consume']
 def serve_detail(detail_id):
  kitchen.post(f'/details/{detail_id}/start',{});kitchen.post(f'/details/{detail_id}/ready',{});sales.post(f'/details/{detail_id}/serve',{})
