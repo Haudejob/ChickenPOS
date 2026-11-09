@@ -1,5 +1,5 @@
 {
-  "executedAtUtc": "2026-11-06T18:46:51.674274+00:00",
+  "executedAtUtc": "2026-11-09T10:26:30.641807+00:00",
   "baseUrl": "http://127.0.0.1:5081",
   "testDatabase": "Isolated ChickenPOS_Test_* database; see test-server startup record",
   "cases": [
@@ -8,7 +8,7 @@
       "fr": "FR10",
       "title": "Đăng nhập sai bị từ chối",
       "status": "PASS",
-      "elapsedMs": 244,
+      "elapsedMs": 276,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -16,7 +16,7 @@
       "fr": "FR11/BR17",
       "title": "Bếp không được quản lý món",
       "status": "PASS",
-      "elapsedMs": 28,
+      "elapsedMs": 41,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -24,7 +24,7 @@
       "fr": "NFR06",
       "title": "POST thiếu CSRF bị từ chối",
       "status": "PASS",
-      "elapsedMs": 30,
+      "elapsedMs": 40,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -32,7 +32,7 @@
       "fr": "FR02",
       "title": "Giá âm bị chặn",
       "status": "PASS",
-      "elapsedMs": 35,
+      "elapsedMs": 45,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -40,7 +40,7 @@
       "fr": "FR06/BR11",
       "title": "Số lượng 0 bị chặn",
       "status": "PASS",
-      "elapsedMs": 49,
+      "elapsedMs": 39,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -48,7 +48,7 @@
       "fr": "FR08/FR09/FR13",
       "title": "Tạo đơn, tính 97.000đ, lưu DB và chưa trừ kho",
       "status": "PASS",
-      "elapsedMs": 268,
+      "elapsedMs": 217,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -56,7 +56,7 @@
       "fr": "FR14",
       "title": "Gửi lặp không tạo công việc bếp trùng",
       "status": "PASS",
-      "elapsedMs": 84,
+      "elapsedMs": 92,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -64,7 +64,7 @@
       "fr": "FR13/FR14",
       "title": "Gọi thêm chỉ gửi dòng mới, gọi lặp không thêm trùng",
       "status": "PASS",
-      "elapsedMs": 118,
+      "elapsedMs": 89,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -72,23 +72,23 @@
       "fr": "FR16/FR24",
       "title": "Bấm bắt đầu hai lần chỉ trừ kho một lần",
       "status": "PASS",
-      "elapsedMs": 199,
+      "elapsedMs": 127,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
       "code": "TC10",
       "fr": "FR24/BR13",
       "title": "Hai yêu cầu đồng thời cho cùng dòng chỉ có một Consume",
-      "status": "PASS",
-      "elapsedMs": 1485,
-      "detail": "Kết quả thực tế khớp các assertion trong test."
+      "status": "FAIL",
+      "elapsedMs": 667,
+      "detail": ""
     },
     {
       "code": "TC11",
       "fr": "FR24/BR19",
       "title": "Thiếu thành phần thứ hai: không trừ phần thứ nhất, giữ Chờ",
       "status": "PASS",
-      "elapsedMs": 422,
+      "elapsedMs": 183,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -96,7 +96,7 @@
       "fr": "FR03/BR10",
       "title": "Đổi giá thực đơn không đổi đơn giá đã chụp",
       "status": "PASS",
-      "elapsedMs": 86,
+      "elapsedMs": 70,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -104,7 +104,7 @@
       "fr": "FR16/FR17/FR19",
       "title": "Quầy trả trước, tiền thừa đúng, chế biến tiếp và hoàn tất",
       "status": "PASS",
-      "elapsedMs": 536,
+      "elapsedMs": 258,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -112,7 +112,7 @@
       "fr": "FR19/FR26/BR12",
       "title": "Hai thu ngân đồng thời chỉ một Payment và doanh thu cộng một lần",
       "status": "PASS",
-      "elapsedMs": 512,
+      "elapsedMs": 537,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -120,7 +120,7 @@
       "fr": "FR18/BR20",
       "title": "Hủy sau chế biến cần duyệt, ghi hao hụt và không xuất/hoàn lần hai",
       "status": "PASS",
-      "elapsedMs": 516,
+      "elapsedMs": 252,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -128,7 +128,7 @@
       "fr": "FR18/TK06",
       "title": "Đơn đã thanh toán không được hủy",
       "status": "PASS",
-      "elapsedMs": 13,
+      "elapsedMs": 162,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -136,15 +136,15 @@
       "fr": "FR23/NFR08",
       "title": "Điều chỉnh có khóa chống lặp, không làm tồn âm",
       "status": "PASS",
-      "elapsedMs": 127,
+      "elapsedMs": 85,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
       "code": "TC18",
       "fr": "FR12/FR17/FR19",
-      "title": "Bàn giao món trước thu tiền, thu xong đóng phiên và chặn gọi thêm",
+      "title": "Bàn hoàn tất đóng phiên cũ, mở phiên mới và chặn gọi thêm vào đơn cũ",
       "status": "PASS",
-      "elapsedMs": 767,
+      "elapsedMs": 284,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -152,7 +152,7 @@
       "fr": "FR10",
       "title": "Đăng xuất khiến phiên cũ không đọc được API",
       "status": "PASS",
-      "elapsedMs": 1243,
+      "elapsedMs": 1246,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -160,7 +160,7 @@
       "fr": "FR24/BR19",
       "title": "Tồn 1kg, hai dòng cần 0,75kg: chỉ một dòng bắt đầu, không tồn âm",
       "status": "PASS",
-      "elapsedMs": 1109,
+      "elapsedMs": 837,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -168,7 +168,7 @@
       "fr": "FR19/BR17",
       "title": "Bán hàng không được gọi API thu tiền",
       "status": "PASS",
-      "elapsedMs": 8,
+      "elapsedMs": 9,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
@@ -176,19 +176,51 @@
       "fr": "FR12/BR18",
       "title": "Một bàn không có hai phiên mở",
       "status": "PASS",
-      "elapsedMs": 126,
+      "elapsedMs": 49,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     },
     {
       "code": "TC23",
       "fr": "Menu mở rộng",
-      "title": "Bốn món mới: đúng ảnh, giá, công thức và chỉ trừ nguyên liệu một lần",
+      "title": "Các món và combo mới đúng ảnh, giá, công thức và chỉ trừ kho một lần",
       "status": "PASS",
-      "elapsedMs": 2011,
+      "elapsedMs": 1748,
+      "detail": "Kết quả thực tế khớp các assertion trong test."
+    },
+    {
+      "code": "TC24",
+      "fr": "FR18",
+      "title": "Đơn chỉ có món Served bị từ chối hủy",
+      "status": "PASS",
+      "elapsedMs": 207,
+      "detail": "Kết quả thực tế khớp các assertion trong test."
+    },
+    {
+      "code": "TC25",
+      "fr": "FR18/FR19",
+      "title": "Chỉ hủy món Cooking, giữ món Served và hao hụt riêng",
+      "status": "PASS",
+      "elapsedMs": 302,
+      "detail": "Kết quả thực tế khớp các assertion trong test."
+    },
+    {
+      "code": "TC26",
+      "fr": "FR18/FR19",
+      "title": "Hủy món Ready chưa giao, giữ nguyên món Served",
+      "status": "PASS",
+      "elapsedMs": 277,
+      "detail": "Kết quả thực tế khớp các assertion trong test."
+    },
+    {
+      "code": "TC27",
+      "fr": "FR18",
+      "title": "Manager tự duyệt hủy và ghi Waste đúng một lần",
+      "status": "PASS",
+      "elapsedMs": 131,
       "detail": "Kết quả thực tế khớp các assertion trong test."
     }
   ],
-  "passed": 23,
-  "failed": 0,
+  "passed": 26,
+  "failed": 1,
   "boundary": "Functional HTTP + SQL persistence/transaction checks. Not a load test, penetration test or production certification."
 }

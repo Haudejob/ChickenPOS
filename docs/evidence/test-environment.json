@@ -1,7 +1,7 @@
 {
-  "database": "ChickenPOS_Test_20261107_014637",
-  "startedAt": "2026-11-06T18:46:39.7387412Z",
   "environment": "Testing",
+  "database": "ChickenPOS_Test_20261109_172616",
   "server": "SQL Server LocalDB",
+  "startedAt": "2026-11-09T10:26:19.4995938Z",
   "port": 5081
 }
