@@ -1,73 +1,53 @@
-# ChickenPOS · Bản demo báo cáo sản phẩm
+# ChickenPOS
 
-Ứng dụng web quản lý quán gà rán cho học phần Công nghệ phần mềm. Backend ASP.NET/C#, giao diện HTML/CSS/JavaScript, dữ liệu SQL Server LocalDB. Cả nhóm cần review và hiểu phần mình trình bày.
+ChickenPOS là ứng dụng web quản lý cửa hàng gà rán. Ứng dụng hỗ trợ bán tại quầy và tại bàn, chuyển món sang bếp, thu tiền, quản lý thực đơn và nguyên liệu, theo dõi doanh thu.
 
-**Repository nhóm:** [Haudejob/ChickenPOS](https://github.com/Haudejob/ChickenPOS). Chủ repo thêm collaborators sau khi nhận username.
+Xem [Hướng dẫn quy trình sử dụng ChickenPOS](docs/HUONG_DAN_SU_DUNG.md) để thao tác theo từng vai trò.
 
-**Đọc trước:** [Làm việc nhóm qua GitHub](docs/LAM_VIEC_NHOM_GITHUB.md), [Việc cần làm cho báo cáo 07/11/2026](docs/HUONG_DAN_BAO_CAO_NGAY_MAI.md), [kịch bản demo](docs/KICH_BAN_DEMO.md), [phạm vi và truy vết](docs/PHAM_VI_VA_TRUY_VET.md), [kết quả test thực tế](docs/evidence/KET_QUA_KIEM_THU.md).
+## Cài đặt và khởi động
 
-## Chạy ngay trên máy đang làm việc
+Cần Windows 64-bit, PowerShell và SQL Server Express LocalDB với instance `MSSQLLocalDB`. Mở PowerShell tại thư mục chứa README này. Ở lần đầu, chạy lệnh sau để chuẩn bị .NET SDK 10 và biên dịch ứng dụng. Bước này cần Internet để tải công cụ và thư viện.
 
-Mở PowerShell tại thư mục project:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\Setup.ps1
+```
+
+Khởi động ứng dụng, sau đó mở [ChickenPOS trên máy này](http://127.0.0.1:5080).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\Start-Demo.ps1 -NoBuild
 ```
 
-Mở **http://127.0.0.1:5080**. `-NoBuild` dùng bản đã biên dịch, phù hợp buổi demo không có mạng. Sau khi sửa backend, dừng server bằng `Stop-Demo.ps1`, rồi chạy `Start-Demo.ps1` không kèm `-NoBuild`.
+Ứng dụng tự tạo database và dữ liệu ban đầu ở lần chạy đầu tiên. Đơn hàng, thanh toán, tồn kho và ảnh món tải lên được lưu trong database của máy đang chạy. Mỗi máy có dữ liệu riêng.
 
-## Tài khoản demo cục bộ
+Để dừng ứng dụng, chạy lệnh sau. Sau khi cập nhật code backend, dừng ứng dụng rồi chạy lại `Start-Demo.ps1` **không kèm `-NoBuild`** để biên dịch bản mới.
 
-| Tài khoản | Vai trò | Phạm vi chính |
-|---|---|---|
-| `quanly` | Quản lý | Thực đơn, kho, duyệt hủy, dashboard |
-| `banhang` | Bán hàng | Đơn, gọi thêm, gửi bếp, giao món |
-| `thungan` | Thu ngân | Tạo đơn, thu tiền, hóa đơn, giao món |
-| `bep` | Bếp | Hàng đợi, bắt đầu, sẵn sàng |
-
-Mật khẩu mẫu chung: **`Chicken@2026!`**. Chỉ dùng tài khoản này cho demo cục bộ. Mật khẩu trong DB lưu dạng hash. Có thể đặt biến môi trường `DemoPassword` **trước lần khởi tạo DB mới** để thay mật khẩu seed; đổi biến sau khi DB đã có tài khoản không đổi hash đang lưu.
-
-## Thiết lập trên máy thành viên khác
-
-1. Cần Windows x64 và **SQL Server Express LocalDB**. Khởi động được instance `MSSQLLocalDB`. Máy dùng SQL Server khác có thể đặt `ConnectionStrings__ChickenPos`; tên DB cần tiền tố `ChickenPOS_` để ứng dụng tự tạo an toàn trong phạm vi project.
-2. Giải nén/clone source. Chạy `scripts/Setup.ps1` bằng PowerShell. Script tải SDK .NET 10 chính thức vào `.tools` nếu máy chưa có SDK phù hợp, khôi phục gói và build. Cần mạng ở lần thiết lập đầu.
-3. Chạy `scripts/Start-Demo.ps1 -NoBuild`. Cơ sở dữ liệu demo `ChickenPOS_Demo_20261106` tự tạo và seed lần đầu; không reset/xóa dữ liệu khi chạy lại.
-4. Muốn chạy bộ test cần Python 3.10+ và `scripts/Run-Tests.ps1`. Script tạo DB `ChickenPOS_Test_<timestamp>` mới, chạy 22 ca trên cổng 5081 rồi dừng server test, giữ DB để đối chiếu. DB test không trộn vào DB demo.
-
-Các script chỉ quản lý server do chúng khởi động. Đóng trình duyệt không xóa đơn, thanh toán hay tồn kho. `.tools`, `artifacts`, MDF/LDF và bí mật không đưa vào Git/ZIP source. SDK và SQL Server không được đóng gói trong ZIP source; kiểm tra máy thuyết trình từ tối nay.
-
-## Luồng có thể demo
-
-- Đăng nhập bốn vai trò, kiểm tra quyền tại backend, logout thu hồi phiên.
-- Thực đơn, tìm món, giỏ hàng, tạo đơn quầy/bàn, một phiên mở/bàn.
-- Gọi thêm trước thanh toán, lưu giá chụp, chỉ gửi dòng mới sang bếp.
-- Bếp bắt đầu: kiểm tra mọi nguyên liệu, trừ/ghi Consume/đổi trạng thái trong một transaction.
-- Chế biến, sẵn sàng, giao món. Quầy trả trước, bàn trả sau, tiền mặt hoặc chuyển khoản thủ công.
-- Chống thu trùng, hóa đơn nội bộ, đóng phiên khi đủ điều kiện.
-- Điều chỉnh kho có lý do và lịch sử, cảnh báo tồn thấp, hủy sau bắt đầu cần quản lý duyệt, không xuất/hoàn lần hai.
-- Dashboard từ Payment thành công, không phải số liệu mockup.
-
-## Giới hạn cần nói đúng
-
-Đây là bản demo học phần, không phải hệ thống production. Chưa có quản lý tài khoản qua UI, quy trình hoàn tiền/đổi món, thuế/phí/voucher, hóa đơn điện tử thuế, tích hợp ngân hàng, sao lưu/khôi phục, hay chứng nhận bảo mật. Chưa có bộ test hiệu năng p95/20 phiên hoặc kiểm thử đầy đủ mọi trình duyệt/thiết bị. Kho và công thức hiện dùng dữ liệu seed; chưa đủ toàn bộ chức năng CRUD danh mục/phiên bản công thức. Session thu hồi trong bộ nhớ của một server, restart server yêu cầu đăng nhập lại; nhiều server cần session store chia sẻ. Giao diện được xây mới theo tông ChickenPOS, chưa khẳng định khớp pixel với sáu mockup.
-
-## Cấu trúc và làm việc nhóm
-
-```text
-src/ChickenPos.Web/Program.cs         API, xác thực, quyền, CSRF
-src/ChickenPos.Web/SessionRegistry.cs Thu hồi phiên trên một server
-src/ChickenPos.Web/Data/Store.cs      Dịch vụ nghiệp vụ và SQL transaction
-src/ChickenPos.Web/Data/schema.sql    13 bảng logic, FK, UNIQUE, CHECK
-src/ChickenPos.Web/wwwroot/           Giao diện thật đang chạy
-scripts/                            Thiết lập, chạy demo, test, dừng server
-tests/integration.py                Ca kiểm thử HTTP + SQL
-docs/                               Hướng dẫn và bằng chứng báo cáo
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\Stop-Demo.ps1
 ```
 
-Để kịp demo, dịch vụ và truy cập SQL còn cùng trong `Store.cs`, trong khi thiết kế buổi 3 tách lớp. Đây là đơn giản hóa triển khai cần nêu rõ; bước sau nên tách service/repository. Các controller logic hiện dùng ASP.NET Minimal API, không có lớp MVC Controller riêng.
+## Tài khoản cục bộ
 
-Repo nhóm dùng remote `https://github.com/Haudejob/ChickenPOS.git`, nhánh chính `main`. Thành viên được cấp quyền clone, tạo nhánh và PR; xem [hướng dẫn GitHub](docs/LAM_VIEC_NHOM_GITHUB.md) và phân công trước khi sửa. Không sửa trực tiếp cùng một file qua thư mục đồng bộ khi chưa thống nhất. Không tạo commit giả cho người chưa làm. Mỗi thành viên cần review, sửa hoặc bổ sung thật và commit phần đó.
+| Tên đăng nhập | Vai trò | Công việc chính |
+| --- | --- | --- |
+| `quanly` | Quản lý | Thực đơn, kho, duyệt hủy, tổng quan và doanh thu |
+| `banhang` | Bán hàng | Tạo đơn, gọi thêm, gửi bếp và xác nhận giao món |
+| `thungan` | Thu ngân | Tạo đơn, thu tiền, xác nhận giao món và in hóa đơn nội bộ |
+| `bep` | Bếp | Nhận món, bắt đầu chế biến và đánh dấu sẵn sàng |
 
-## Nguồn thiết kế
+Mật khẩu khởi tạo mặc định cho bốn tài khoản cục bộ là `Chicken@2026!`. Có thể đặt biến môi trường `DemoPassword` trước lần tạo database đầu tiên để chọn mật khẩu khác.
 
-Workbook `QL_QuanGaRan_ThietKe_Buoi3.xlsx` trong thư mục buổi 3 của người dùng (SHA-256 `4123c7ba7a9de949b211fa122834ef8d67b968380ab1bba2b1e3059735591097`), template học phần và các quyết định TK01–TK09. Dữ liệu món/tồn đầu kỳ trong app là **dữ liệu seed demo**, không phải số liệu khảo sát hay vận hành quán thật.
+## Phát triển và kiểm thử
+
+- `src/ChickenPos.Web/` chứa ứng dụng ASP.NET Core và mã truy cập SQL Server.
+- `src/ChickenPos.Web/wwwroot/` chứa giao diện và ảnh thực đơn đi kèm.
+- `scripts/` chứa các lệnh thiết lập, khởi động, dừng và kiểm thử.
+- `tests/integration.py` chứa các ca kiểm thử tích hợp.
+
+Để chạy kiểm thử, cài Python 3.10 trở lên rồi chạy lệnh bên dưới. Bộ kiểm thử chạy trên cổng 5081 với database riêng.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\Run-Tests.ps1
+```
+
+Xem [hướng dẫn làm việc nhóm qua GitHub](docs/LAM_VIEC_NHOM_GITHUB.md) để tạo nhánh, gửi Pull Request và cập nhật code.
