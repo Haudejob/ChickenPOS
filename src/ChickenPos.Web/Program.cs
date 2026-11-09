@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 
 var builder=WebApplication.CreateBuilder(args);
+builder.Services.AddControllers();
 builder.WebHost.ConfigureKestrel(o=>o.Limits.MaxRequestBodySize=65536);
 builder.Services.AddSingleton<Store>();
 builder.Services.AddSingleton<SessionRegistry>();
@@ -76,5 +77,6 @@ api.MapPost("/cancellations/{id:int}/review",async(int id,ReviewInput input,Http
 api.MapGet("/inventory",(Store s)=>s.Inventory()).RequireAuthorization("manager");
 api.MapPost("/inventory/adjust",async(AdjustInput input,HttpContext c,Store s)=>new{stock=await s.Adjust(input,Actor(c))}).RequireAuthorization("manager");
 api.MapGet("/dashboard",(DateTime? from,DateTime? to,Store s)=>s.Dashboard(from,to)).RequireAuthorization("manager");
+app.MapControllers();
 app.MapFallbackToFile("index.html");
 app.Run();
