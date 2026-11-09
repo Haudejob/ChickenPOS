@@ -41,13 +41,12 @@ namespace ChickenPos.Web.Controllers
                 ? totalRevenue / totalOrders
                 : 0m;
 
-            return Ok(new
-            {
+            return Ok(new RevenueSummaryResponse(
                 totalOrders,
                 totalRevenue,
                 averageOrderValue,
-                date = today.ToString("yyyy-MM-dd")
-            });
+                today.ToString("yyyy-MM-dd")
+            ));
         }
 
         // Báo cáo doanh thu 7 ngày gần nhất
@@ -73,14 +72,16 @@ namespace ChickenPos.Web.Controllers
                 ("endDate", endDate)
             );
 
-            var reportList = rows.Select(r => new
-            {
-                date = r["reportDate"]?.ToString(),
-                ordersCount = Convert.ToInt32(r["ordersCount"]),
-                totalAmount = Convert.ToDecimal(r["totalAmount"])
-            }).ToList();
+            var reportList = rows.Select(r => new RevenueDailyReportRow(
+                r["reportDate"]?.ToString() ?? string.Empty,
+                Convert.ToInt32(r["ordersCount"]),
+                Convert.ToDecimal(r["totalAmount"])
+            )).ToList();
 
             return Ok(reportList);
         }
     }
+
+    public sealed record RevenueSummaryResponse(int totalOrders, decimal totalRevenue, decimal averageOrderValue, string date);
+    public sealed record RevenueDailyReportRow(string date, int ordersCount, decimal totalAmount);
 }

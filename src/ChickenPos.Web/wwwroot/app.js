@@ -53,8 +53,13 @@ async function kitchen(){const rows=await api('/kitchen');frame('Màn hình bế
 async function inventory(){const data=await api('/inventory');ingredients=data.ingredients;frame('Kho nguyên liệu','Tồn kho đối soát từ giao dịch. Mọi điều chỉnh đều ghi người và lý do.',`<div class="stats"><div class="stat"><span>NGUYÊN LIỆU</span><strong>${ingredients.length}</strong><span>Đang theo dõi trong kho</span></div><div class="stat"><span>CẢNH BÁO TỒN THẤP</span><strong>${ingredients.filter(i=>i.stock<=i.minStock).length}</strong><span>Tồn nhỏ hơn hoặc bằng ngưỡng</span></div><div class="stat"><span>GIAO DỊCH GẦN ĐÂY</span><strong>${data.transactions.length}</strong><span>Hiển thị tối đa 80 lần gần nhất</span></div></div><section class="panel"><h2>Tồn kho hiện tại</h2><div class="table-wrap"><table><thead><tr><th>Nguyên liệu</th><th>Đơn vị</th><th>Tồn</th><th>Ngưỡng</th><th>Trạng thái</th></tr></thead><tbody>${ingredients.map(i=>`<tr><td><strong>${esc(i.name)}</strong></td><td>${esc(i.unit)}</td><td class="${i.stock<=i.minStock?'low':''}">${i.stock}</td><td>${i.minStock}</td><td>${i.stock<=i.minStock?'<span class="badge Waiting">Cần bổ sung</span>':'<span class="badge Approved">Trong ngưỡng</span>'}</td></tr>`).join('')}</tbody></table></div></section><section class="panel"><h2>Lịch sử nhập, xuất và điều chỉnh</h2><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Nguyên liệu</th><th>Lượng thay đổi</th><th>Loại</th><th>Hao hụt</th><th>Người thực hiện</th></tr></thead><tbody>${data.transactions.map(t=>`<tr><td>${time(t.occurredAt)}</td><td>${esc(t.ingredient)}</td><td>${t.quantity>0?'+':''}${t.quantity} ${esc(t.unit)}</td><td>${esc(names[t.type])}${t.reason?'<small>'+esc(t.reason)+'</small>':''}</td><td>${t.waste||'—'}</td><td>${esc(t.actor)}</td></tr>`).join('')}</tbody></table></div></section>`,'<button class="primary" data-action="adjust">＋ Nhập / điều chỉnh kho</button>');}
 async function revenue(){
   try {
-    const summary = (await api('/revenue/summary')) || {};
-    const dailyReports = (await api('/revenue/daily-report')) || [];
+    const summary = await api('/revenue/summary');
+    const dailyReports = await api('/revenue/daily-report');
+    if(!summary||typeof summary!=='object'||Array.isArray(summary))throw new Error('API doanh thu không đúng cấu trúc: summary phải là một đối tượng.');
+    for(const field of ['totalOrders','totalRevenue','averageOrderValue','date']){
+      if(summary[field]===undefined||summary[field]===null)throw new Error(`API doanh thu thiếu trường summary.${field}.`);
+    }
+    if(!Array.isArray(dailyReports))throw new Error('API doanh thu không đúng cấu trúc: daily-report phải là mảng (kể cả khi không có dữ liệu).');
     const totalOrders = summary.totalOrders ?? 0;
     const totalRevenue = summary.totalRevenue ?? 0;
     const avgValue = summary.averageOrderValue ?? 0;
@@ -79,7 +84,7 @@ async function revenue(){
       </section>`;
     frame('Quản lý doanh thu','Thống kê tổng quan và báo cáo doanh thu chi tiết.',content);
   } catch (err) {
-    frame('Quản lý doanh thu','Thống kê tổng quan và báo cáo doanh thu chi tiết.',`<div class="panel error-text" style="color:red;padding:15px;"><p>⚠️ ${esc(err.message)}</p><p class="muted">Vui lòng đăng nhập tài khoản Quản lý (Manager) để xem dữ liệu.</p></div>`);
+    frame('Quản lý doanh thu','Thống kê tổng quan và báo cáo doanh thu chi tiết.',`<div class="panel error-text" style="color:red;padding:15px;"><p>⚠️ ${esc(err.message)}</p><p class="muted">Không thể tải báo cáo doanh thu. Hãy thử cập nhật lại.</p></div>`);
   }
 }
 async function dashboard(){const d=await api('/dashboard');const max=Math.max(1,...d.top.map(i=>i.quantity));frame('Tổng quan kinh doanh','Theo dõi doanh thu, đơn hàng và nguyên liệu trong ngày.',`<div class="stats"><article class="stat"><span>DOANH THU HÔM NAY</span><strong>${money(d.totals.revenue)}</strong><span>Từ các đơn đã thanh toán</span></article><article class="stat"><span>ĐƠN ĐÃ THANH TOÁN</span><strong>${d.totals.paidOrders}</strong><span>Đã ghi nhận thanh toán</span></article><article class="stat"><span>CẦN BỔ SUNG KHO</span><strong>${d.lowStock.length}</strong><span>Tồn không vượt ngưỡng tối thiểu</span></article></div><div class="split"><section class="panel"><h2>Món bán chạy hôm nay</h2><div class="ranking">${d.top.map(i=>`<div><strong>${esc(i.name)}</strong><span>${i.quantity} phần</span><progress max="${max}" value="${i.quantity}"></progress></div>`).join('')||'<p class="empty">Chưa có đơn thanh toán hôm nay.</p>'}</div></section><section class="panel"><h2>Cảnh báo nguyên liệu</h2>${d.lowStock.map(i=>`<p class="low">${esc(i.name)}: ${i.stock} ${esc(i.unit)}</p>`).join('')||'<p class="muted">Nguyên liệu đang trên ngưỡng cảnh báo.</p>'}</section></div>`);}

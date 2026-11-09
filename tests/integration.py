@@ -34,6 +34,17 @@ def test(code,fr,title,fn):
 assert Client().get('/health').get('testInstance'), 'Refuse to run mutations on a non-Testing instance.'
 sales=Client('banhang');manager=Client('quanly');cashier=Client('thungan');kitchen=Client('bep')
 state={}
+def revenue_contract():
+ summary=manager.get('/revenue/summary');daily=manager.get('/revenue/daily-report')
+ assert isinstance(summary,dict),f'summary must be an object, got {type(summary).__name__}'
+ assert all(k in summary for k in ('totalOrders','totalRevenue','averageOrderValue','date')),f'missing summary field: {summary}'
+ assert isinstance(summary['totalOrders'],int) and isinstance(summary['totalRevenue'],(int,float)) and isinstance(summary['averageOrderValue'],(int,float)) and isinstance(summary['date'],str),f'invalid summary types: {summary}'
+ assert isinstance(daily,list),f'daily-report must always be an array, got {type(daily).__name__}'
+ assert all(isinstance(row,dict) and all(k in row for k in ('date','ordersCount','totalAmount')) and isinstance(row['date'],str) and isinstance(row['ordersCount'],int) and isinstance(row['totalAmount'],(int,float)) for row in daily),f'invalid daily-report row: {daily}'
+ return summary,daily
+def revenue_empty_contract():
+ summary,daily=revenue_contract();assert summary['totalOrders']==0 and summary['totalRevenue']==0 and summary['averageOrderValue']==0 and daily==[],f'fresh test database should return zero summary and []: {summary}, {daily}'
+test('TC00','FR20','API doanh thu có cấu trúc ổn định khi database kiểm thử chưa có thanh toán',revenue_empty_contract)
 def inventory():return manager.get('/inventory')
 def stocks():return {r['id']:r['stock'] for r in inventory()['ingredients']}
 def create(items,table=None):return sales.post('/orders',{'orderType':'Table' if table else 'Counter','tableId':table,'items':[{'productId':p,'quantity':q} for p,q in items],'requestKey':key()})['id']
@@ -91,7 +102,7 @@ def counter_pay():
  o=create([(1,1)]);state['counter']=o;sales.post(f'/orders/{o}/send',{'requestKey':key()},409)
  cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':10000,'transferConfirmed':False,'requestKey':key()},400)
  cashier.post(f'/orders/{o}/pay',{'method':'Transfer','cashReceived':0,'transferConfirmed':False,'requestKey':key()},400)
- payment=cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':50000,'transferConfirmed':False,'requestKey':key()});assert payment['change']==11000;assert detail(o)['header']['status']=='Open';send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});kitchen.post(f'/details/{d}/ready',{});sales.post(f'/details/{d}/serve',{});assert detail(o)['header']['status']=='Completed'
+ payment=cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':50000,'transferConfirmed':False,'requestKey':key()});assert payment['change']==11000;assert detail(o)['header']['status']=='Open';summary,daily=revenue_contract();assert summary['totalOrders']>=1 and summary['totalRevenue']>=39000 and daily,f'paid order should appear in revenue API: {summary}, {daily}';assert all(row['ordersCount']>0 and row['totalAmount']>0 for row in daily);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});kitchen.post(f'/details/{d}/ready',{});sales.post(f'/details/{d}/serve',{});assert detail(o)['header']['status']=='Completed'
 test('TC13','FR16/FR17/FR19','Quầy trả trước, tiền thừa đúng, chế biến tiếp và hoàn tất',counter_pay)
 def concurrent_payment():
  o=create([(4,1)]);before=manager.get('/dashboard')['totals'];c2=Client('thungan');payload={'method':'Cash','cashReceived':20000,'transferConfirmed':False,'requestKey':key()}
