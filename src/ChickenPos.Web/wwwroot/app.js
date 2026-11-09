@@ -5,7 +5,8 @@ const money=n=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND',ma
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=()=>crypto.randomUUID();
 const productImages=Object.freeze({1:'ga-gion-cay.png',2:'ga-sot-mat-ong.png',3:'khoai-tay-chien.png',4:'coca-cola.png',5:'combo-hai-mieng-ga.png',6:'tra-dao.png'});
-function productImage(p,thumbnail=false){const file=productImages[p.id],src=p.imagePath||(file?'/images/menu/'+file:null);return src?`<img class="${thumbnail?'product-thumbnail':'product-photo'}" src="${esc(src)}" alt="${esc(p.name)}" width="1536" height="1024" loading="lazy" decoding="async">`:esc(p.icon);}
+function productImageSource(p){return p.imagePath||(productImages[p.id]?'/images/menu/'+productImages[p.id]:'');}
+function productImage(p,thumbnail=false){const src=productImageSource(p);return src?`<img class="${thumbnail?'product-thumbnail':'product-photo'}" src="${esc(src)}" alt="${esc(p.name)}" width="1536" height="1024" loading="lazy" decoding="async">`:esc(p.icon);}
 const names={Manager:'Quản lý',Sales:'Bán hàng',Cashier:'Thu ngân',Kitchen:'Nhân viên bếp',Draft:'Chưa gửi',Waiting:'Chờ chế biến',Cooking:'Đang chế biến',Ready:'Sẵn sàng',Served:'Đã giao',Cancelled:'Đã hủy',Open:'Đang phục vụ',Completed:'Hoàn tất',Pending:'Chờ duyệt',Approved:'Đã duyệt',Rejected:'Từ chối',Cash:'Tiền mặt',Transfer:'Chuyển khoản',Opening:'Tồn đầu kỳ',Adjustment:'Điều chỉnh',Consume:'Chế biến',Created:'Tạo đơn',ItemsAdded:'Gọi thêm món',SentToKitchen:'Gửi bếp',CookingStarted:'Bắt đầu chế biến',PaymentRecorded:'Ghi nhận thanh toán',CancellationApproved:'Duyệt hủy',CancellationRequested:'Yêu cầu hủy',CancellationRejected:'Từ chối hủy',Paid:'Đã thanh toán',Unpaid:'Chưa thanh toán'};
 const badge=s=>`<span class="badge ${esc(s)}">${esc(names[s]||s)}</span>`;
 const time=s=>s?new Date(s+'Z').toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'—';
@@ -24,7 +25,7 @@ const navigation=()=>[
 function frame(title,description,content,toolbar=''){
   app.innerHTML=`<div class="shell"><aside class="sidebar"><div class="brand"><span class="brandmark">♨</span>Chicken<b>POS</b></div><nav class="nav">${navigation().map(([id,icon,n])=>`<button data-action="nav" data-page="${id}" class="${page===id?'active':''}">${icon} &nbsp; ${n}</button>`).join('')}</nav><div class="sidebar-foot"><strong>ChickenPOS</strong><br>Quản lý bán hàng tại cửa hàng</div></aside><div class="workspace"><header class="topbar"><div><strong>Không gian làm việc</strong><small>ChickenPOS · Quản lý cửa hàng</small></div><div class="user"><div class="avatar">${esc(user.name[0])}</div><div><strong>${esc(user.name)}</strong><small>${names[user.role]}</small></div><button class="small secondary" data-action="logout">Đăng xuất</button></div></header><main class="content"><header class="page-head"><div><div class="eyebrow">ChickenPOS / ${esc(title)}</div><h1>${esc(title)}</h1><p>${esc(description)}</p></div><div class="toolbar">${toolbar}<button data-action="refresh" class="secondary">↻ Cập nhật</button></div></header>${content}</main></div></div>`;
 }
-function modal(html,onSubmit){document.querySelector('#modal-body').innerHTML=html;document.querySelector('#modal-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await onSubmit(new FormData(e.target));dialog.close();await render();}catch(err){toast(err.message,true);}finally{b.disabled=false;}};dialog.showModal();}
+function modal(html,onSubmit){document.querySelector('#modal-body').innerHTML=html;document.querySelector('#modal-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await onSubmit(new FormData(e.target));dialog.close();await render();}catch(err){const error=dialog.querySelector('[data-modal-error]');if(error)error.textContent=err.message;else toast(err.message,true);}finally{b.disabled=false;}};dialog.showModal();}
 async function pos(){
   products=await api('/products');restoreCart();const tables=await api('/tables');
   frame('Bán hàng','Chọn món, tạo đơn mới hoặc gọi thêm vào đơn chưa thanh toán.',`<div class="split"><section class="pos-menu"><label class="sr-only" for="product-search">Tìm món theo tên hoặc nhóm món</label><input id="product-search" class="search" type="search" placeholder="Tìm món hoặc nhóm món…" value="${esc(search)}" autocomplete="off"><p class="filter-note" id="product-count" aria-live="polite">${matchingProducts().length} món phù hợp</p><div class="menu-grid" id="menu">${menu()}</div></section><aside class="panel cart"><div class="cart-title"><div><div class="eyebrow">${selectedId?'Gọi thêm món':'Đơn hàng mới'}</div><h2>${selectedId?'Đơn #'+selectedId:'Giỏ hàng'}</h2></div><div id="cart-controls">${cart.length?'<button type="button" class="small secondary" data-action="clear-cart">Xóa tất cả</button>':''}</div></div><form data-form="order">${selectedId?`<p class="note">Món mới được thêm vào đơn #${selectedId}. Dòng đã gửi bếp giữ nguyên.</p><button type="button" class="small secondary" data-action="new-order">Tạo đơn khác</button>`:`<label>Hình thức phục vụ<select name="orderType" id="service"><option value="Table">Tại bàn · trả sau</option><option value="Counter">Tại quầy · trả trước</option></select></label><label id="table-field">Chọn bàn<select name="tableId">${tables.map(t=>`<option value="${t.id}" ${t.sessionId?'disabled':''}>${esc(t.name)}${t.sessionId?' · đang phục vụ':''}</option>`).join('')}</select></label>`}<div id="cart-items">${cartLines()}</div><div class="summary"><span>Tạm tính</span><span id="cart-total">${money(cart.reduce((s,i)=>s+i.price*i.quantity,0))}</span></div><button id="order-submit" class="primary full" type="submit" ${cart.length?'':'disabled'}>✓ ${selectedId?'Xác nhận gọi thêm':'Tạo đơn và lưu'}</button><p class="note">Xác nhận giỏ chưa trừ kho. Nguyên liệu chỉ trừ khi bếp bắt đầu chế biến.</p></form></aside></div>`);
@@ -83,9 +84,93 @@ async function revenue(){
 }
 async function dashboard(){const d=await api('/dashboard');const max=Math.max(1,...d.top.map(i=>i.quantity));frame('Tổng quan kinh doanh','Theo dõi doanh thu, đơn hàng và nguyên liệu trong ngày.',`<div class="stats"><article class="stat"><span>DOANH THU HÔM NAY</span><strong>${money(d.totals.revenue)}</strong><span>Từ các đơn đã thanh toán</span></article><article class="stat"><span>ĐƠN ĐÃ THANH TOÁN</span><strong>${d.totals.paidOrders}</strong><span>Đã ghi nhận thanh toán</span></article><article class="stat"><span>CẦN BỔ SUNG KHO</span><strong>${d.lowStock.length}</strong><span>Tồn không vượt ngưỡng tối thiểu</span></article></div><div class="split"><section class="panel"><h2>Món bán chạy hôm nay</h2><div class="ranking">${d.top.map(i=>`<div><strong>${esc(i.name)}</strong><span>${i.quantity} phần</span><progress max="${max}" value="${i.quantity}"></progress></div>`).join('')||'<p class="empty">Chưa có đơn thanh toán hôm nay.</p>'}</div></section><section class="panel"><h2>Cảnh báo nguyên liệu</h2>${d.lowStock.map(i=>`<p class="low">${esc(i.name)}: ${i.stock} ${esc(i.unit)}</p>`).join('')||'<p class="muted">Nguyên liệu đang trên ngưỡng cảnh báo.</p>'}</section></div>`);}
 async function cancellations(){const list=await api('/cancellations');frame('Duyệt yêu cầu hủy','Sau khi bắt đầu chế biến, chỉ quản lý được duyệt. Không hoàn hoặc trừ kho lần hai.',`<div class="stack">${list.map(i=>`<article class="panel"><div class="eyebrow">${esc(i.code)}</div><h2>${esc(i.reason)}</h2><p>${esc(i.requester)} · ${time(i.requestedAt)} · ${badge(i.status)}</p>${i.status==='Pending'?`<div class="actions"><button class="primary" data-action="review" data-id="${i.id}" data-approve="true">Duyệt hủy</button><button class="secondary" data-action="review" data-id="${i.id}" data-approve="false">Từ chối</button></div>`:''}</article>`).join('')||'<section class="panel empty">Chưa có yêu cầu hủy.</section>'}</div>`);}
-function adminProductRows(){const query=normalizeSearch(adminSearch);const visible=products.filter(p=>(!query||normalizeSearch(`${p.name} ${p.category}`).includes(query))&&(adminCategory==='all'||p.category===adminCategory)&&(adminStatus==='all'||(adminStatus==='active'?p.isActive:!p.isActive)));return visible.map(p=>`<tr class="menu-admin-row"><td>${productImage(p,true)} <strong>${esc(p.name)}</strong></td><td>${esc(p.category)}</td><td>${money(p.price)}</td><td>${p.isActive?'<span class="badge Approved">Đang bán</span>':'<span class="badge Pending">Ngừng bán</span>'}</td><td><button class="small secondary" data-action="edit-product" data-id="${p.id}">Sửa</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Không có món phù hợp với bộ lọc.</td></tr>';}
+function adminProductRows(){const query=normalizeSearch(adminSearch);const visible=products.filter(p=>(!query||normalizeSearch(`${p.name} ${p.category}`).includes(query))&&(adminCategory==='all'||p.category===adminCategory)&&(adminStatus==='all'||(adminStatus==='active'?p.isActive:!p.isActive)));return visible.map(p=>`<tr class="menu-admin-row"><td>${productImage(p,true)} <strong>${esc(p.name)}</strong></td><td>${esc(p.category)}</td><td>${money(p.price)}</td><td>${p.isActive?'<span class="badge Approved">Đang bán</span>':'<span class="badge Pending">Ngừng bán</span>'}</td><td><button class="small secondary" data-action="edit-product" data-id="${p.id}">Sửa</button> <button class="small danger" data-action="delete-product" data-id="${p.id}" aria-label="Xóa ${esc(p.name)}">Xóa</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Không có món phù hợp với bộ lọc.</td></tr>';}
 function updateAdminProductResults(){const body=document.querySelector('#menu-admin-rows');if(!body)return;body.innerHTML=adminProductRows();document.querySelector('#menu-admin-count').textContent=`${products.filter(p=>{const query=normalizeSearch(adminSearch);return(!query||normalizeSearch(`${p.name} ${p.category}`).includes(query))&&(adminCategory==='all'||p.category===adminCategory)&&(adminStatus==='all'||(adminStatus==='active'?p.isActive:!p.isActive));}).length} món`;}
 async function adminProducts(){products=await api('/products');const categories=[...new Set(products.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));if(adminCategory!=='all'&&!categories.includes(adminCategory))adminCategory='all';frame('Quản lý thực đơn','Thay đổi giá không làm đổi giá đã chụp trong đơn cũ.',`<section class="panel menu-admin-panel"><div class="menu-admin-filters"><label class="sr-only" for="menu-admin-search">Tìm món theo tên hoặc nhóm</label><input id="menu-admin-search" type="search" placeholder="Tìm món hoặc nhóm…" value="${esc(adminSearch)}" autocomplete="off"><label class="sr-only" for="menu-admin-category">Lọc theo nhóm món</label><select id="menu-admin-category"><option value="all">Tất cả nhóm</option>${categories.map(category=>`<option value="${esc(category)}" ${adminCategory===category?'selected':''}>${esc(category)}</option>`).join('')}</select><label class="sr-only" for="menu-admin-status">Lọc theo trạng thái món</label><select id="menu-admin-status"><option value="all" ${adminStatus==='all'?'selected':''}>Tất cả trạng thái</option><option value="active" ${adminStatus==='active'?'selected':''}>Đang bán</option><option value="inactive" ${adminStatus==='inactive'?'selected':''}>Ngừng bán</option></select><span class="filter-note" id="menu-admin-count" aria-live="polite">${products.length} món</span></div><div class="table-wrap"><table><thead><tr><th>Món ăn</th><th>Nhóm</th><th>Giá</th><th>Trạng thái</th><th></th></tr></thead><tbody id="menu-admin-rows">${adminProductRows()}</tbody></table></div></section>`,'<button class="primary" data-action="edit-product">＋ Thêm món</button>');}
+async function prepareProductPhoto(file){
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024)
+    throw new Error('Chọn ảnh JPG, PNG hoặc WebP tối đa 10 MB.');
+  const bitmap=await createImageBitmap(file).catch(()=>{throw new Error('Không đọc được ảnh đã chọn.');});
+  try{
+    const scale=Math.min(1,1000/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const context=canvas.getContext('2d',{alpha:false});
+    context.fillStyle='#fff7ed';
+    context.fillRect(0,0,canvas.width,canvas.height);
+    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const data=canvas.toDataURL('image/jpeg',.82);
+    if(!data.startsWith('data:image/jpeg;base64,')||data.length>546150)
+      throw new Error('Ảnh quá lớn sau khi xử lý. Hãy chọn ảnh nhỏ hơn.');
+    return data;
+  }finally{bitmap.close();}
+}
+
+function editProduct(id){
+  const p=products.find(item=>item.id===id)||{name:'',price:39000,category:'Gà rán',isActive:true,icon:'🍗'};
+  const current=productImageSource(p);
+  let photo=null;
+  modal(`<h2>${id?'Sửa món':'Thêm món mới'}</h2>
+    <label>Tên món<input name="name" maxlength="120" value="${esc(p.name)}" required></label>
+    <label>Giá (VND)<input name="price" type="number" min="0" max="10000000" step="1" value="${p.price}" required></label>
+    <label>Nhóm món<input name="category" maxlength="40" value="${esc(p.category)}" required></label>
+    <label>Ảnh món<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="product-photo-help"></label>
+    <small id="product-photo-help" class="muted">JPG, PNG hoặc WebP, tối đa 10 MB.</small>
+    <img class="product-edit-preview" alt="Xem trước ảnh món" ${current?`src="${esc(current)}"`:'hidden'}>
+    <label><span><input type="checkbox" name="active" ${p.isActive?'checked':''}> Đang kinh doanh</span></label>
+    <p class="note">Ngừng bán giữ nguyên dữ liệu và giá trong đơn cũ.</p>`,async d=>{
+      const data=photo?await photo:null;
+      await api(id?'/products/'+id:'/products',{
+        name:d.get('name'),price:Number(d.get('price')),category:d.get('category'),icon:p.icon,isActive:d.has('active'),
+        ...(data?{photo:data.split(',')[1]}:{})
+      },id?'PUT':'POST');
+      toast('Đã lưu món.');
+    });
+  const input=dialog.querySelector('[name=photo]');
+  const preview=dialog.querySelector('.product-edit-preview');
+  input.addEventListener('change',async()=>{
+    input.setCustomValidity('');
+    const file=input.files[0];
+    const pending=file?prepareProductPhoto(file):null;
+    photo=pending;
+    preview.hidden=!current;
+    if(current)preview.src=current;
+    else preview.removeAttribute('src');
+    try{
+      const data=await pending;
+      if(photo===pending&&data){
+        preview.src=data;
+        preview.hidden=false;
+      }
+    }catch(err){
+      if(photo===pending){
+        input.setCustomValidity(err.message);
+        input.reportValidity();
+      }
+    }
+  });
+}
+
+function confirmProductDeletion(id){
+  const product=products.find(item=>item.id===id);
+  if(!product)return;
+  modal(`<h2>Xóa món</h2>
+    <p>Bạn có muốn xóa <strong>${esc(product.name)}</strong> khỏi thực đơn?</p>
+    <p class="muted">Món đã xuất hiện trong đơn hàng chỉ có thể ngừng bán.</p>
+    <p class="error-text" data-modal-error role="alert"></p>`,async()=>{
+      await api('/products/'+id,{},'DELETE');
+      toast('Đã xóa món.');
+    });
+  const confirm=dialog.querySelector('[type=submit]');
+  confirm.textContent='Xóa món';
+  confirm.className='danger';
+  dialog.addEventListener('close',()=>{
+    confirm.textContent='Xác nhận';
+    confirm.className='primary';
+  },{once:true});
+}
+
 async function render(){try{if(!user)return login();if(page==='pos')await pos();else if(page==='orders')await orders();else if(page==='kitchen')await kitchen();else if(page==='inventory')await inventory();else if(page==='revenue')await revenue();else if(page==='cancellations')await cancellations();else if(page==='products')await adminProducts();else await dashboard();}catch(e){if(e.status===401){user=null;login();}toast(e.message,true);}}
 document.addEventListener('input',e=>{if(e.target.id==='product-search'){search=e.target.value;const grid=document.querySelector('#menu');grid.innerHTML=menu();grid.classList.remove('menu--filtered');void grid.offsetWidth;grid.classList.add('menu--filtered');document.querySelector('#product-count').textContent=`${matchingProducts().length} món phù hợp`;}else if(e.target.id==='menu-admin-search'){adminSearch=e.target.value;updateAdminProductResults();}});
 document.addEventListener('change',e=>{if(e.target.id==='service')document.querySelector('#table-field').hidden=e.target.value==='Counter';else if(e.target.id==='menu-admin-category'){adminCategory=e.target.value;updateAdminProductResults();}else if(e.target.id==='menu-admin-status'){adminStatus=e.target.value;updateAdminProductResults();}});
@@ -115,7 +200,8 @@ document.addEventListener('click',async e=>{
    else if(a==='cancel'){modal('<h2>Yêu cầu hủy đơn</h2><label>Lý do<input name="reason" maxlength="500" required placeholder="Ghi rõ lý do hủy"></label><p class="note">Sau bắt đầu chế biến cần quản lý duyệt. Đơn đã thanh toán chưa hỗ trợ hủy.</p>',async d=>{const r=await api(`/orders/${selectedId}/cancel`,{reason:d.get('reason')});toast(r.status==='Pending'?'Đã gửi quản lý duyệt.':'Đã hủy và lưu lịch sử.');});}
   else if(a==='review'){await api(`/cancellations/${id}/review`,{approve:b.dataset.approve==='true'});toast('Đã ghi quyết định.');await render();}
    else if(a==='adjust'){modal(`<h2>Nhập / điều chỉnh kho</h2><label>Nguyên liệu<select name="ingredient">${ingredients.map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('')}</select></label><label>Lượng tăng (+) hoặc giảm (−)<input name="quantity" type="number" min="-100000" max="100000" step="0.001" required></label><label>Lý do<input name="reason" maxlength="300" required></label>`,async d=>{await api('/inventory/adjust',{ingredientId:Number(d.get('ingredient')),quantity:Number(d.get('quantity')),reason:d.get('reason'),requestKey:key()});toast('Đã cập nhật kho và ghi lịch sử.');});}
-   else if(a==='edit-product'){const p=products.find(i=>i.id===id)||{name:'',price:39000,category:'Gà rán',isActive:true,icon:'🍗'};modal(`<h2>${id?'Sửa món':'Thêm món mới'}</h2><label>Tên món<input name="name" maxlength="120" value="${esc(p.name)}" required></label><label>Giá (VND)<input name="price" type="number" min="0" max="10000000" step="1" value="${p.price}" required></label><label>Nhóm món<input name="category" maxlength="40" value="${esc(p.category)}" required></label><label><span><input type="checkbox" name="active" ${p.isActive?'checked':''}> Đang kinh doanh</span></label><p class="note">Ngừng bán giữ nguyên dữ liệu và giá trong đơn cũ.</p>`,async d=>{await api(id?'/products/'+id:'/products',{name:d.get('name'),price:Number(d.get('price')),category:d.get('category'),icon:p.icon,isActive:d.has('active')},id?'PUT':'POST');toast('Đã lưu món.');});}
+   else if(a==='edit-product'){editProduct(id);}
+   else if(a==='delete-product'){confirmProductDeletion(id);}
    else if(a==='print')window.print();
   }catch(err){toast(err.message,true);}finally{busy=false;if(b.isConnected)b.disabled=false;}
 });
