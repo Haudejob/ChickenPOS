@@ -9,4 +9,4 @@ public record PayInput(string Method,decimal CashReceived,bool TransferConfirmed
 public record CancelInput(string Reason);
 public record ReviewInput(bool Approve);
 public record AdjustInput(int IngredientId,decimal Quantity,string Reason,string RequestKey);
-public record ProductInput(string Name,decimal Price,string Category,string Icon,bool IsActive);
+public record ProductInput(string Name,decimal Price,string Category,string Icon,bool IsActive,byte[]? Photo = null);

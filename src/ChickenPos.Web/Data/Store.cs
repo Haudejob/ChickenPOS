@@ -252,10 +252,34 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
         var top=await Read("SELECT TOP(5) d.ProductNameSnapshot name,SUM(d.Quantity) quantity FROM OrderDetail d JOIN Payment p ON p.OrderId=d.OrderId WHERE p.PaidAt>=@from AND p.PaidAt<@to AND d.KitchenStatus<>'Cancelled' GROUP BY d.ProductNameSnapshot ORDER BY quantity DESC,name",args);
         var low=await Read("SELECT Name name,Stock stock,Unit unit FROM Ingredient WHERE Stock<=MinStock ORDER BY Id");return new{totals=totals[0],top,lowStock=low,from=f.ToString("yyyy-MM-dd"),to=end.AddDays(-1).ToString("yyyy-MM-dd")};
     }
+    public Task DeleteProduct(int id) => Transaction(async(c,t)=>{
+        Require(await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE ProductId=@id",("id",id))==0,
+            "Món đã có trong đơn hàng. Hãy chọn Sửa và bỏ chọn Đang kinh doanh.",409);
+        await Exec(c,t,"DELETE FROM Recipe WHERE ProductId=@id",("id",id));
+        Require(await Exec(c,t,"DELETE FROM Product WHERE Id=@id",("id",id))>0,"Không tìm thấy món.",404);
+        return 0;
+    });
+
+    public async Task<byte[]?> ProductPhoto(int id)
+    {
+        using var c=new SqlConnection(connection);
+        await c.OpenAsync();
+        using var cmd=Command(c,null,"SELECT Photo FROM Product WHERE Id=@id",("id",id));
+        return await cmd.ExecuteScalarAsync() as byte[];
+    }
+
     public Task<int> SaveProduct(int? id,ProductInput input)=>Transaction(async(c,t)=>{
         var name=Clean(input.Name,120,"Tên món");var category=Clean(input.Category,40,"Nhóm món");Require(input.Price>=0&&input.Price<=10000000&&decimal.Truncate(input.Price)==input.Price,"Giá phải là VND nguyên không âm.");
-        if(id is null)return await Value<int>(c,t,"INSERT Product(Name,Price,Category,Icon,IsActive) OUTPUT INSERTED.Id VALUES(@n,@p,@c,@i,@a)",("n",name),("p",input.Price),("c",category),("i",string.IsNullOrEmpty(input.Icon)?"🍗":input.Icon[..Math.Min(input.Icon.Length,10)]),("a",input.IsActive));
-        Require(await Exec(c,t,"UPDATE Product SET Name=@n,Price=@p,Category=@c,IsActive=@a WHERE Id=@id",("n",name),("p",input.Price),("c",category),("a",input.IsActive),("id",id))>0,"Không tìm thấy món.",404);return id.Value;
+        if(id is null)id=await Value<int>(c,t,"INSERT Product(Name,Price,Category,Icon,IsActive) OUTPUT INSERTED.Id VALUES(@n,@p,@c,@i,@a)",("n",name),("p",input.Price),("c",category),("i",string.IsNullOrEmpty(input.Icon)?"🍗":input.Icon[..Math.Min(input.Icon.Length,10)]),("a",input.IsActive));
+        else Require(await Exec(c,t,"UPDATE Product SET Name=@n,Price=@p,Category=@c,IsActive=@a WHERE Id=@id",("n",name),("p",input.Price),("c",category),("a",input.IsActive),("id",id))>0,"Không tìm thấy món.",404);
+
+        if(input.Photo is { } photo){
+            Require(photo.Length is >= 5 and <= 409600 && photo[0]==255 && photo[1]==216 && photo[2]==255
+                && photo[^2]==255 && photo[^1]==217,"Ảnh món không hợp lệ hoặc vượt quá dung lượng cho phép.");
+            await Exec(c,t,"UPDATE Product SET Photo=@photo,ImagePath=@path WHERE Id=@id",
+                ("photo",photo),("path",$"/api/products/{id}/photo?v={Guid.NewGuid():N}"),("id",id));
+        }
+        return id.Value;
     });
 }
 

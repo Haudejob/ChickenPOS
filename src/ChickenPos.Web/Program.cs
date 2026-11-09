@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Features;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using ChickenPos.Web;
@@ -35,7 +36,12 @@ app.Use(async(ctx,next)=>{
     ctx.Response.Headers["Referrer-Policy"]="same-origin";
     ctx.Response.Headers["Content-Security-Policy"]="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'";
     if(ctx.Request.Path.StartsWithSegments("/api"))ctx.Response.Headers.CacheControl="no-store";
+    if ((HttpMethods.IsPost(ctx.Request.Method) || HttpMethods.IsPut(ctx.Request.Method))
+        && ctx.Request.Path.StartsWithSegments("/api/products")
+        && ctx.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+        limit.MaxRequestBodySize=600*1024;
     try{await next();}
+    catch(BadHttpRequestException e){ctx.Response.StatusCode=e.StatusCode;await ctx.Response.WriteAsJsonAsync(new{error="Dữ liệu gửi lên không hợp lệ hoặc quá lớn."});}
     catch(ApiError e){ctx.Response.StatusCode=e.Status;await ctx.Response.WriteAsJsonAsync(new{error=e.Message});}
     catch(AntiforgeryValidationException){ctx.Response.StatusCode=400;await ctx.Response.WriteAsJsonAsync(new{error="Phiên thao tác hết hạn. Hãy tải lại trang."});}
     catch(SqlException e) when(e.Number is 2601 or 2627 or 1205){ctx.Response.StatusCode=409;await ctx.Response.WriteAsJsonAsync(new{error="Thao tác bị trùng hoặc dữ liệu vừa thay đổi. Hãy tải lại và thử lại."});}
@@ -43,7 +49,7 @@ app.Use(async(ctx,next)=>{
 });
 app.UseDefaultFiles();app.UseStaticFiles();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();
 var api=app.MapGroup("/api").AddEndpointFilter(async(context,next)=>{
-    if(HttpMethods.IsPost(context.HttpContext.Request.Method)||HttpMethods.IsPut(context.HttpContext.Request.Method))await context.HttpContext.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context.HttpContext);
+    if(HttpMethods.IsPost(context.HttpContext.Request.Method)||HttpMethods.IsPut(context.HttpContext.Request.Method)||HttpMethods.IsDelete(context.HttpContext.Request.Method))await context.HttpContext.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context.HttpContext);
     return await next(context);
 });
 static int Actor(HttpContext ctx)=>int.Parse(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -58,8 +64,14 @@ api.MapPost("/login",async(LoginInput input,HttpContext ctx,Store store,SessionR
 api.MapPost("/logout",async(HttpContext c,SessionRegistry sessions)=>{sessions.Revoke(c.User.FindFirstValue("session"));await c.SignOutAsync();return Results.Ok();}).RequireAuthorization();
 api.MapGet("/me",(HttpContext c)=>new{id=Actor(c),name=c.User.Identity!.Name,role=c.User.FindFirstValue(ClaimTypes.Role)}).RequireAuthorization();
 api.MapGet("/products",(Store s)=>s.Products()).RequireAuthorization();
+api.MapGet("/products/{id:int}/photo",async(int id,Store s)=>
+    await s.ProductPhoto(id) is { } photo ? Results.File(photo,"image/jpeg") : Results.NotFound()).RequireAuthorization();
 api.MapPost("/products",async(ProductInput input,Store s)=>new{id=await s.SaveProduct(null,input)}).RequireAuthorization("manager");
 api.MapPut("/products/{id:int}",async(int id,ProductInput input,Store s)=>new{id=await s.SaveProduct(id,input)}).RequireAuthorization("manager");
+api.MapDelete("/products/{id:int}",async(int id,Store s)=>{
+    await s.DeleteProduct(id);
+    return Results.NoContent();
+}).RequireAuthorization("manager");
 api.MapGet("/tables",(Store s)=>s.Tables()).RequireAuthorization();
 api.MapGet("/orders",(Store s)=>s.Orders()).RequireAuthorization();
 api.MapGet("/orders/{id:int}",(int id,Store s)=>s.Order(id)).RequireAuthorization();

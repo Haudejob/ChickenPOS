@@ -23,3 +23,6 @@ IF COL_LENGTH(N'dbo.Product', N'ImagePath') IS NULL
     ALTER TABLE Product ADD ImagePath nvarchar(240) NULL;
 IF OBJECT_ID(N'dbo.CatalogMigration', N'U') IS NULL
     CREATE TABLE CatalogMigration(Id nvarchar(100) NOT NULL PRIMARY KEY, AppliedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME());
+
+IF COL_LENGTH(N'dbo.Product', N'Photo') IS NULL
+    ALTER TABLE Product ADD Photo varbinary(max) NULL;
