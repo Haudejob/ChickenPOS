@@ -35,5 +35,5 @@ Nếu bếp báo thiếu nguyên liệu, quản lý kiểm tra mục **Kho nguy�
 | **Thực đơn** | Chọn **Thêm món** hoặc **Sửa**, nhập tên, giá, nhóm và chọn ảnh nếu cần. Hỗ trợ JPG, PNG và WebP tối đa 10 MB. |
 | **Ngừng bán hoặc xóa món** | Bỏ chọn **Đang kinh doanh** để ẩn món khỏi màn bán hàng. Dùng **Xóa** với món chưa từng xuất hiện trong đơn hàng. |
 | **Kho nguyên liệu** | Xem tồn và cảnh báo dưới ngưỡng. Khi nhập hàng hoặc kiểm kê, chọn **Nhập / điều chỉnh kho**, nhập lượng thay đổi và lý do. |
-| **Duyệt hủy** | Mở yêu cầu hủy để xem lý do và chọn **Duyệt hủy** hoặc **Từ chối**. Đơn đã thanh toán cần xử lý theo quy trình của cửa hàng. |
+| **Duyệt hủy** | Nhân viên gửi lý do để tạo yêu cầu **Chờ duyệt**; hóa đơn chưa bị hủy. Quản lý kiểm tra đơn, người yêu cầu và lý do, sau đó chọn **Duyệt hủy** hoặc **Từ chối** và nhập lý do quyết định. Đơn đã thanh toán không thể gửi hoặc duyệt hủy. |
 | **Tổng quan** và **Doanh thu** | Xem hoạt động trong ngày, cảnh báo kho và báo cáo doanh thu theo ngày. Chọn **Cập nhật** để tải lại số liệu. |

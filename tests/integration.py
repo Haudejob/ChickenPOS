@@ -99,7 +99,7 @@ def concurrent_payment():
  after=manager.get('/dashboard')['totals'];assert r[0]['id']==r[1]['id'];assert after['paidOrders']-before['paidOrders']==1;assert after['revenue']-before['revenue']==19000
 test('TC14','FR19/FR26/BR12','Hai thu ngân đồng thời chỉ một Payment và doanh thu cộng một lần',concurrent_payment)
 def cancel_after_cooking():
- o=create([(1,1)],4);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks();r=sales.post(f'/orders/{o}/cancel',{'reason':'Khách đổi ý, ca kiểm thử'});assert r['status']=='Pending';cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':50000,'transferConfirmed':False,'requestKey':key()},409);manager.post(f'/cancellations/{r["id"]}/review',{'approve':True});assert stocks()==before;assert detail(o)['header']['status']=='Cancelled';consume=[t for t in inventory()['transactions'] if t['detailId']==d and t['type']=='Consume'];assert len(consume)==1 and consume[0]['waste']==.25
+ o=create([(1,1)],4);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks();r=sales.post(f'/orders/{o}/cancel',{'reason':'Khách đổi ý, ca kiểm thử'});assert r['status']=='Pending' and detail(o)['header']['status']=='Open';cashier.post(f'/orders/{o}/pay',{'method':'Cash','cashReceived':50000,'transferConfirmed':False,'requestKey':key()},409);manager.post(f'/cancellations/{r["id"]}/review',{'approve':True,'reason':'Đồng ý theo yêu cầu khách'});assert stocks()==before;assert detail(o)['header']['status']=='Cancelled';assert detail(o)['cancellations'][0]['managerReason']=='Đồng ý theo yêu cầu khách';consume=[t for t in inventory()['transactions'] if t['detailId']==d and t['type']=='Consume'];assert len(consume)==1 and consume[0]['waste']==.25
 test('TC15','FR18/BR20','Hủy sau chế biến cần duyệt, ghi hao hụt và không xuất/hoàn lần hai',cancel_after_cooking)
 def paid_order_cannot_cancel():
  o=create([(4,1)]);payment=cashier.post(f'/orders/{o}/pay',{'method':'Transfer','cashReceived':0,'transferConfirmed':True,'requestKey':key()});before=stocks();before_cancellations=detail(o)['cancellations']
@@ -180,7 +180,7 @@ def cancel_served_and_cooking():
  o=create([(1,1),(2,1)],7);send(o);lines=detail(o)['items'];served_id,cooking_id=[line['id'] for line in lines];serve_detail(served_id);kitchen.post(f'/details/{cooking_id}/start',{});before=stocks()
  assert consume_for(served_id)[0]['waste']==0 and consume_for(cooking_id)[0]['waste']==0
  request=sales.post(f'/orders/{o}/cancel',{'reason':'Hủy món chưa giao'});assert request['status']=='Pending';assert stocks()==before
- assert manager.post(f'/cancellations/{request["id"]}/review',{'approve':True})['status']=='Approved'
+ assert manager.post(f'/cancellations/{request["id"]}/review',{'approve':True,'reason':'Chấp thuận theo quy định'})['status']=='Approved'
  result=detail(o);statuses={line['id']:line['status'] for line in result['items']};assert statuses[served_id]=='Served' and statuses[cooking_id]=='Cancelled';assert result['header']['status']=='Open';assert stocks()==before
  assert consume_for(served_id)[0]['waste']==0 and consume_for(cooking_id)[0]['waste']==.25
  assert any(h['eventType']=='Served' for h in result['history']);assert pay_table(o)['amount']==39000;assert detail(o)['header']['status']=='Completed'
@@ -189,17 +189,43 @@ test('TC25','FR18/FR19','Chỉ hủy món Cooking, giữ món Served và hao h�
 def cancel_served_and_ready():
  o=create([(1,1),(2,1)],7);send(o);lines=detail(o)['items'];served_id,ready_id=[line['id'] for line in lines];serve_detail(served_id);kitchen.post(f'/details/{ready_id}/start',{});kitchen.post(f'/details/{ready_id}/ready',{});before=stocks()
  request=sales.post(f'/orders/{o}/cancel',{'reason':'Hủy món sẵn sàng chưa giao'});assert request['status']=='Pending';assert stocks()==before
- manager.post(f'/cancellations/{request["id"]}/review',{'approve':True})
+ manager.post(f'/cancellations/{request["id"]}/review',{'approve':True,'reason':'Chấp thuận theo quy định'})
  result=detail(o);statuses={line['id']:line['status'] for line in result['items']};assert statuses[served_id]=='Served' and statuses[ready_id]=='Cancelled';assert result['header']['status']=='Open';assert stocks()==before
  assert consume_for(served_id)[0]['waste']==0 and consume_for(ready_id)[0]['waste']==.25
  assert pay_table(o)['amount']==39000;assert detail(o)['header']['status']=='Completed'
 test('TC26','FR18/FR19','Hủy món Ready chưa giao, giữ nguyên món Served',cancel_served_and_ready)
 
-def manager_self_approves_cancel():
+def cancellation_workflow_and_races():
  o=create([(1,1)],7);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks()
- result=manager.post(f'/orders/{o}/cancel',{'reason':'Quản lý tự duyệt'});assert result['status']=='Approved';assert stocks()==before
- order=detail(o);assert order['items'][0]['status']=='Cancelled' and order['header']['status']=='Cancelled';assert order['cancellations'][0]['status']=='Approved';assert consume_for(d)[0]['waste']==.25
-test('TC27','FR18','Manager tự duyệt hủy và ghi Waste đúng một lần',manager_self_approves_cancel)
+ request=manager.post(f'/orders/{o}/cancel',{'reason':'Yêu cầu từ quản lý vẫn cần duyệt'});assert request['status']=='Pending';assert detail(o)['header']['status']=='Open' and stocks()==before
+ sales.post(f'/cancellations/{request["id"]}/review',{'approve':True,'reason':'Không có quyền'},403)
+ manager.post(f'/cancellations/{request["id"]}/review',{'approve':True,'reason':'   '},400)
+ manager.post(f'/orders/{o}/cancel',{'reason':'Gửi trùng'},409)
+ manager2=Client('quanly')
+ payload={'approve':True,'reason':'Duyệt hủy sau khi kiểm tra'}
+ with concurrent.futures.ThreadPoolExecutor(2) as pool:r=list(pool.map(lambda c:c.post(f'/cancellations/{request["id"]}/review',payload),[manager,manager2]))
+ assert [x['status'] for x in r]==['Approved','Approved']
+ order=detail(o);assert order['items'][0]['status']=='Cancelled' and order['header']['status']=='Cancelled';assert order['cancellations'][0]['managerReason']==payload['reason'];assert consume_for(d)[0]['waste']==.25;assert stocks()==before
+test('TC27','FR18/BR20','Yêu cầu chỉ chờ duyệt, thiếu lý do và xử lý đồng thời chỉ hủy một lần',cancellation_workflow_and_races)
+
+def cancellation_request_waits():
+ o=create([(1,1)]);before=stocks();request=sales.post(f'/orders/{o}/cancel',{'reason':'Nhập nhầm món'});order=detail(o)
+ assert request['status']=='Pending' and order['header']['status']=='Open' and order['items'][0]['status']=='Draft' and stocks()==before
+ assert order['cancellations'][0]['status']=='Pending' and order['cancellations'][0]['requester']=='Nhân viên bán hàng' and order['cancellations'][0]['managerReason'] is None
+ sales.post(f'/orders/{o}/cancel',{'reason':'Gửi lại lần nữa'},409)
+test('TC32','FR18','Nhân viên gửi yêu cầu chỉ tạo trạng thái chờ và chặn gửi lặp',cancellation_request_waits)
+
+def cancellation_rejection():
+ o=create([(1,1)]);send(o);d=item(o);kitchen.post(f'/details/{d}/start',{});before=stocks()
+ request=sales.post(f'/orders/{o}/cancel',{'reason':'Khách đề nghị hủy'});assert request['status']=='Pending' and detail(o)['header']['status']=='Open'
+ manager.post(f'/cancellations/{request["id"]}/review',{'approve':False,'reason':'Từ chối vì món đang chế biến'})
+ order=detail(o);assert order['header']['status']=='Open' and order['items'][0]['status']=='Cooking';assert stocks()==before;assert order['cancellations'][0]['status']=='Rejected' and order['cancellations'][0]['managerReason']=='Từ chối vì món đang chế biến'
+ assert manager.post(f'/cancellations/{request["id"]}/review',{'approve':True,'reason':'Gửi lại'},)['status']=='Rejected'
+test('TC30','FR18/BR20','Từ chối lưu lý do và không đổi đơn hay tồn kho',cancellation_rejection)
+
+def missing_request_reason():
+ o=create([(1,1)]);sales.post(f'/orders/{o}/cancel',{'reason':'   '},400);assert detail(o)['cancellations']==[] and detail(o)['header']['status']=='Open'
+test('TC31','FR18','Thiếu lý do nhân viên bị từ chối',missing_request_reason)
 
 def product_photo_upload():
  import base64

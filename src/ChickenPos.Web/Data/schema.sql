@@ -26,3 +26,5 @@ IF OBJECT_ID(N'dbo.CatalogMigration', N'U') IS NULL
 
 IF COL_LENGTH(N'dbo.Product', N'Photo') IS NULL
     ALTER TABLE Product ADD Photo varbinary(max) NULL;
+IF COL_LENGTH(N'dbo.CancellationRequest', N'ManagerReason') IS NULL
+    ALTER TABLE CancellationRequest ADD ManagerReason nvarchar(500) NULL;

@@ -85,7 +85,7 @@ api.MapPost("/details/{id:int}/serve",async(int id,HttpContext c,Store s)=>new{s
 api.MapPost("/orders/{id:int}/pay",async(int id,PayInput input,HttpContext c,Store s)=>await s.Pay(id,input,Actor(c))).RequireAuthorization("cash");
 api.MapPost("/orders/{id:int}/cancel",async(int id,CancelInput input,HttpContext c,Store s)=>await s.Cancel(id,input.Reason,Actor(c),c.User.IsInRole("Manager"))).RequireAuthorization("cancel");
 api.MapGet("/cancellations",(Store s)=>s.Cancellations()).RequireAuthorization("manager");
-api.MapPost("/cancellations/{id:int}/review",async(int id,ReviewInput input,HttpContext c,Store s)=>new{status=await s.Review(id,input.Approve,Actor(c))}).RequireAuthorization("manager");
+api.MapPost("/cancellations/{id:int}/review",async(int id,ReviewInput input,HttpContext c,Store s)=>new{status=await s.Review(id,input.Approve,input.Reason,Actor(c))}).RequireAuthorization("manager");
 api.MapGet("/inventory",(Store s)=>s.Inventory()).RequireAuthorization("manager");
 api.MapPost("/inventory/adjust",async(AdjustInput input,HttpContext c,Store s)=>new{stock=await s.Adjust(input,Actor(c))}).RequireAuthorization("manager");
 api.MapGet("/dashboard",(DateTime? from,DateTime? to,Store s)=>s.Dashboard(from,to)).RequireAuthorization("manager");

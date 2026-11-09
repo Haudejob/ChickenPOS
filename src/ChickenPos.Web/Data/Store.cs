@@ -137,7 +137,7 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
         Require(headers.Count>0,"Không tìm thấy đơn.",404);
         var items=await Read("SELECT Id id,ProductId productId,ProductNameSnapshot name,UnitPriceSnapshot price,Quantity quantity,KitchenStatus status,KitchenBatchId batchId,SentAt sentAt,StartedAt startedAt,ServedAt servedAt FROM OrderDetail WHERE OrderId=@id ORDER BY Id",("id",id));
         var history=await Read("SELECT h.Id id,h.EventType eventType,h.NewState newState,h.OccurredAt occurredAt,u.DisplayName actor FROM OrderStatusHistory h JOIN Users u ON u.Id=h.ActorId WHERE h.OrderId=@id ORDER BY h.Id DESC",("id",id));
-        var cancellations=await Read("SELECT Id id,Reason reason,Status status FROM CancellationRequest WHERE OrderId=@id ORDER BY Id DESC",("id",id));
+        var cancellations=await Read("SELECT r.Id id,r.Reason reason,r.ManagerReason managerReason,r.Status status,r.RequestedAt requestedAt,r.ReviewedAt reviewedAt,requester.DisplayName requester,reviewer.DisplayName reviewer FROM CancellationRequest r JOIN Users requester ON requester.Id=r.RequesterId LEFT JOIN Users reviewer ON reviewer.Id=r.ReviewerId WHERE r.OrderId=@id ORDER BY r.Id DESC",("id",id));
         return new{header=headers[0],items,history,cancellations,total=items.Where(i=>i["status"] as string != "Cancelled").Sum(i=>(decimal)i["price"]!*(int)i["quantity"]!)};
     }
     static async Task<Dictionary<string,object?>> LockOrder(SqlConnection c,SqlTransaction t,int id)
@@ -225,17 +225,25 @@ public sealed class Store(IConfiguration config, IWebHostEnvironment env)
     public Task<object> Cancel(int id,string reason,int actor,bool manager)=>Transaction(async(c,t)=>{
         reason=Clean(reason,500,"Lý do hủy");var o=await LockOrder(c,t,id);Require((string)o["Status"]! =="Open","Đơn không còn mở.",409);await NotPaid(c,t,id);await NoPending(c,t,id);
         Require(await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE OrderId=@id AND KitchenStatus NOT IN ('Served','Cancelled')",("id",id))>0,"Đơn không còn món chưa giao để hủy.",409);
-        bool started=await Value<int>(c,t,"SELECT COUNT(*) FROM OrderDetail WHERE OrderId=@id AND StartedAt IS NOT NULL",("id",id))>0;bool approved=!started||manager;
-        int request=await Value<int>(c,t,"INSERT CancellationRequest(OrderId,RequesterId,ReviewerId,Reason,Status,ReviewedAt) OUTPUT INSERTED.Id VALUES(@o,@a,@reviewer,@reason,@status,@time)",("o",id),("a",actor),("reviewer",approved?actor:null),("reason",reason),("status",approved?"Approved":"Pending"),("time",approved?DateTime.UtcNow:null));
-        if(approved)await ApplyCancellation(c,t,id,request,actor);else await History(c,t,id,null,actor,"Open","Pending","CancellationRequested",$"request-{request}");return (object)new{id=request,status=approved?"Approved":"Pending"};
+        int request=await Value<int>(c,t,"INSERT CancellationRequest(OrderId,RequesterId,Reason,Status) OUTPUT INSERTED.Id VALUES(@o,@a,@reason,'Pending')",("o",id),("a",actor),("reason",reason));
+        await History(c,t,id,null,actor,"Open","Pending","CancellationRequested",$"request-{request}");return (object)new{id=request,status="Pending"};
     });
-    public Task<List<Dictionary<string,object?>>> Cancellations()=>Read("SELECT r.Id id,r.OrderId orderId,o.Code code,r.Reason reason,r.Status status,r.RequestedAt requestedAt,u.DisplayName requester FROM CancellationRequest r JOIN Orders o ON o.Id=r.OrderId JOIN Users u ON u.Id=r.RequesterId ORDER BY r.Id DESC");
-    public Task<string> Review(int id,bool approve,int actor)=>Transaction(async(c,t)=>{
-        int order=await Value<int>(c,t,"SELECT OrderId FROM CancellationRequest WHERE Id=@id",("id",id));Require(order>0,"Không có yêu cầu hủy.",404);await LockOrder(c,t,order);await NotPaid(c,t,order);
-        var status=await Value<string>(c,t,"SELECT Status FROM CancellationRequest WITH(UPDLOCK,HOLDLOCK) WHERE Id=@id",("id",id));if(status!="Pending")return status;
-        var target=approve?"Approved":"Rejected";await Exec(c,t,"UPDATE CancellationRequest SET Status=@s,ReviewerId=@a,ReviewedAt=SYSUTCDATETIME() WHERE Id=@id",("s",target),("a",actor),("id",id));
+    public async Task<List<Dictionary<string,object?>>> Cancellations(){
+        var requests=await Read("SELECT r.Id id,r.OrderId orderId,o.Code code,o.Status orderStatus,o.CreatedAt orderCreatedAt,t.Name tableName,r.Reason reason,r.ManagerReason managerReason,r.Status status,r.RequestedAt requestedAt,r.ReviewedAt reviewedAt,requester.DisplayName requester,reviewer.DisplayName reviewer,COALESCE(SUM(CASE WHEN d.KitchenStatus<>'Cancelled' THEN d.Quantity*d.UnitPriceSnapshot ELSE 0 END),0) total FROM CancellationRequest r JOIN Orders o ON o.Id=r.OrderId JOIN Users requester ON requester.Id=r.RequesterId LEFT JOIN Users reviewer ON reviewer.Id=r.ReviewerId LEFT JOIN DiningSession ds ON ds.Id=o.SessionId LEFT JOIN DiningTable t ON t.Id=ds.TableId LEFT JOIN OrderDetail d ON d.OrderId=o.Id GROUP BY r.Id,r.OrderId,o.Code,o.Status,o.CreatedAt,t.Name,r.Reason,r.ManagerReason,r.Status,r.RequestedAt,r.ReviewedAt,requester.DisplayName,reviewer.DisplayName ORDER BY r.Id DESC");
+        foreach(var request in requests)request["items"]=await Read("SELECT ProductNameSnapshot name,Quantity quantity,UnitPriceSnapshot price,KitchenStatus status FROM OrderDetail WHERE OrderId=@o ORDER BY Id",("o",request["orderId"]));
+        return requests;
+    }
+    public async Task<string> Review(int id,bool approve,string reason,int actor){
+        reason=Clean(reason,500,"Lý do quyết định của quản lý");
+        var rows=await Read("SELECT OrderId orderId FROM CancellationRequest WHERE Id=@id",("id",id));Require(rows.Count==1,"Không có yêu cầu hủy.",404);int order=(int)rows[0]["orderId"]!;
+        return await Transaction(async(c,t)=>{
+        await LockOrder(c,t,order);
+        var status=await Value<string>(c,t,"SELECT Status FROM CancellationRequest WITH(UPDLOCK,HOLDLOCK) WHERE Id=@id AND OrderId=@order",("id",id),("order",order));if(status!="Pending")return status;
+        if(approve)await NotPaid(c,t,order);
+        var target=approve?"Approved":"Rejected";await Exec(c,t,"UPDATE CancellationRequest SET Status=@s,ManagerReason=@reason,ReviewerId=@a,ReviewedAt=SYSUTCDATETIME() WHERE Id=@id",("s",target),("reason",reason),("a",actor),("id",id));
         if(approve)await ApplyCancellation(c,t,order,id,actor);else await History(c,t,order,null,actor,"Pending","Open","CancellationRejected",$"review-{id}");return target;
-    });
+        });
+    }
     public async Task<object> Inventory()=>new{ingredients=await Read("SELECT Id id,Name name,Unit unit,Stock stock,MinStock minStock FROM Ingredient ORDER BY Id"),transactions=await Read("SELECT TOP(80) t.Id id,i.Name ingredient,i.Unit unit,t.QuantityDelta quantity,t.Type type,t.OccurredAt occurredAt,t.OrderDetailId detailId,t.WasteQuantity waste,u.DisplayName actor,t.RequestKey requestKey,t.Reason reason FROM InventoryTransaction t JOIN Ingredient i ON i.Id=t.IngredientId JOIN Users u ON u.Id=t.ActorId ORDER BY t.Id DESC")};
     public Task<decimal> Adjust(AdjustInput input,int actor)=>Transaction(async(c,t)=>{
         var key=Key(input.RequestKey);var reason=Clean(input.Reason,300,"Lý do điều chỉnh");Require(input.Quantity!=0&&Math.Abs(input.Quantity)<=100000&&decimal.Round(input.Quantity,3)==input.Quantity,"Lượng điều chỉnh phải khác 0, tối đa 3 số thập phân.");
