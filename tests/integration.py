@@ -111,13 +111,14 @@ def adjustment_idempotent():
  manager.post('/inventory/adjust',{'ingredientId':1,'quantity':-100000,'reason':'Âm tồn','requestKey':key()},409)
 test('TC17','FR23/NFR08','Điều chỉnh có khóa chống lặp, không làm tồn âm',adjustment_idempotent)
 def table_completion():
- o=state['o1'];d=detail(o)
+ o=state['o1'];d=detail(o);table=next(t for t in sales.get('/tables') if t['id']==1);old_session=table['sessionId'];assert table['orderId']==o
  for line in d['items']:
   if line['status']=='Waiting':kitchen.post(f'/details/{line["id"]}/start',{})
   kitchen.post(f'/details/{line["id"]}/ready',{});sales.post(f'/details/{line["id"]}/serve',{})
  assert detail(o)['header']['status']=='Open';cashier.post(f'/orders/{o}/pay',{'method':'Transfer','cashReceived':0,'transferConfirmed':True,'requestKey':key()});assert detail(o)['header']['status']=='Completed';assert next(t for t in sales.get('/tables') if t['id']==1)['sessionId'] is None
  sales.post(f'/orders/{o}/items',{'items':[{'productId':1,'quantity':1}],'requestKey':key()},409)
-test('TC18','FR12/FR17/FR19','Bàn giao món trước thu tiền, thu xong đóng phiên và chặn gọi thêm',table_completion)
+ new_order=create([(1,1)],1);reopened=next(t for t in sales.get('/tables') if t['id']==1);assert reopened['orderId']==new_order and reopened['sessionId'] is not None and reopened['sessionId']!=old_session
+test('TC18','FR12/FR17/FR19','Bàn hoàn tất đóng phiên cũ, mở phiên mới và chặn gọi thêm vào đơn cũ',table_completion)
 def logout_blocks():
  c=Client('banhang');old='; '.join(cookie.name+'='+cookie.value for cookie in c.jar);c.post('/logout',{});c.req('/orders',expect=401)
  # Replaying the exact cookie copied before logout must also fail server-side.
